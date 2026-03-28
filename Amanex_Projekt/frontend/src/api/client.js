@@ -3,7 +3,7 @@
 // Token wird automatisch mitgeschickt
 // Fehler werden einheitlich behandelt
 
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://amanex-production.up.railway.app';
 
 // Token aus localStorage lesen
 function getToken() {
