@@ -1,0 +1,40 @@
+
+const T = {
+  de: {
+    p1:'Live Dashboard',p2:'Bot-Steuerung',p3:'Markt-Scanner',p4:'Trade-Historie',
+    p5:'Performance',p6:'Wissensbasis',p7:'Auszahlung',p8:'Team',p9:'API-Keys',
+    m1:'Letzter Scan: vor 4 Min.',m2:'Einstellungen & Risikoparameter',
+    m3:'312 Maerkte ueberwacht - 8 Chancen',m4:'90-Tage-Uebersicht - 312 Trades',
+    m5:'90-Tage-Analyse',m6:'47 Lektionen gespeichert',
+    m7:'Kalshi + Polymarket',m8:'3 aktive Mitglieder',m9:'9 Dienste konfigurieren',
+    overview:'Uebersicht',analysis:'Analyse',system:'System',
+    botActive:'Bot aktiv',botStopped:'Bot gestoppt',
+    kill:'KILL SWITCH',startBot:'BOT STARTEN',
+    boton:'AN',botoff:'AUS',botRunning:'Bot laeuft',botStoppedMsg:'Manuell gestoppt',
+    aktiv:'Aktiv',won:'Gewonnen',lost:'Verloren',
+    scannow:'Jetzt scannen',scanning:'Scanne...',
+    show:'Anzeigen',hide:'Verbergen',save:'Speichern',saved:'Gespeichert',
+    rem:'Entfernen',sendInvite:'Einladung senden',invPending:'Einladung ausstehend',
+    notifTitle:'Benachrichtigungen',notifClear:'Alle loeschen',noNotif:'Keine Benachrichtigungen',
+    saveset:'Einstellungen speichern',all:'Alle',
+  },
+  en: {
+    p1:'Live Dashboard',p2:'Bot Control',p3:'Market Scanner',p4:'Trade History',
+    p5:'Performance',p6:'Knowledge Base',p7:'Withdraw',p8:'Team',p9:'API Keys',
+    m1:'Last scan: 4 min ago',m2:'Settings & risk parameters',
+    m3:'312 markets monitored - 8 opportunities',m4:'90-day overview - 312 trades',
+    m5:'90-day analysis',m6:'47 lessons saved',
+    m7:'Kalshi + Polymarket',m8:'3 active members',m9:'9 services to configure',
+    overview:'Overview',analysis:'Analysis',system:'System',
+    botActive:'Bot active',botStopped:'Bot stopped',
+    kill:'KILL SWITCH',startBot:'START BOT',
+    boton:'ON',botoff:'OFF',botRunning:'Bot running',botStoppedMsg:'Manually stopped',
+    aktiv:'Active',won:'Won',lost:'Lost',
+    scannow:'Scan Now',scanning:'Scanning...',
+    show:'Show',hide:'Hide',save:'Save',saved:'Saved',
+    rem:'Remove',sendInvite:'Send Invitation',invPending:'Invitation pending',
+    notifTitle:'Notifications',notifClear:'Clear all',noNotif:'No notifications',
+    saveset:'Save Settings',all:'All',
+  }
+};
+export const t = (lang, key) => T[lang][key] || key;

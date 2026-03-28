@@ -1,0 +1,69 @@
+const { createClient } = require('@supabase/supabase-js');
+const config = require('../config');
+
+const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
+
+module.exports = {
+  supabase,
+
+  async saveTrade(trade) {
+    const { data, error } = await supabase.from('trades').insert(trade).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async updateTrade(id, updates) {
+    const { data, error } = await supabase.from('trades').update(updates).eq('id', id).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async getOpenTrades() {
+    const { data, error } = await supabase.from('trades').select('*').eq('status', 'open');
+    if (error) throw error;
+    return data || [];
+  },
+
+  async savePrediction(prediction) {
+    const { data, error } = await supabase.from('predictions').insert(prediction).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async saveLesson(lesson) {
+    const { data, error } = await supabase.from('knowledge_base').insert(lesson).select().single();
+    if (error) throw error;
+    return data;
+  },
+
+  async getBotSettings() {
+    const { data, error } = await supabase.from('bot_settings').select('*');
+    if (error) throw error;
+    const settings = {};
+    (data || []).forEach(row => { settings[row.key] = row.value; });
+    return settings;
+  },
+
+  async getAccountBalance() {
+    const { data, error } = await supabase
+      .from('bot_settings').select('value').eq('key', 'account_balance').single();
+    if (error) return 10000;
+    return parseFloat(data.value) || 10000;
+  },
+
+  async updateBalance(balance) {
+    await supabase.from('bot_settings')
+      .upsert({ key: 'account_balance', value: String(balance), updated_at: new Date().toISOString() });
+  },
+
+  async getDailyPnL() {
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('trades')
+      .select('pnl')
+      .gte('created_at', today)
+      .eq('status', 'closed');
+    if (error) return 0;
+    return (data || []).reduce((sum, t) => sum + (t.pnl || 0), 0);
+  },
+};

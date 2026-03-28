@@ -1,0 +1,222 @@
+{
+  "info": {
+    "name": "Amanex Backend API",
+    "description": "Alle API-Endpunkte fuer den Amanex Trading Bot.\n\n1. Zuerst Login ausfuehren\n2. Token wird automatisch gespeichert\n3. Alle anderen Requests benoetigen den Token",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "description": "Backend URL - anpassen fuer Produktion" },
+    { "key": "token",   "value": "", "description": "Wird nach Login automatisch gesetzt" }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "Server-Status pruefen",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "description": "Prueft ob der Server laeuft. Kein Token benoetigt."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.token) {",
+                  "  pm.collectionVariables.set('token', res.token);",
+                  "  console.log('Token gespeichert');",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@amanex.de\",\n  \"password\": \"IhrPasswort\"\n}"
+            },
+            "description": "Anmelden und Token erhalten. Token wird automatisch fuer alle weiteren Requests gespeichert."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bot Steuerung",
+      "item": [
+        {
+          "name": "Bot-Status abrufen",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/bot/status",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Zeigt ob Bot aktiv ist, letzten Run und naechsten geplanten Scan."
+          }
+        },
+        {
+          "name": "Bot starten",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/bot/start",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Deaktiviert den Kill Switch und startet den Bot. Nur Admin."
+          }
+        },
+        {
+          "name": "Kill Switch (Bot stoppen)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/bot/stop",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Aktiviert den Kill Switch. Bot stoppt sofort alle neuen Trades. Nur Admin."
+          }
+        },
+        {
+          "name": "Manuellen Scan starten",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/bot/scan",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Startet sofort einen Scan ohne auf den naechsten Cron-Job zu warten."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Live-Metriken abrufen",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/dashboard/metrics",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Kontostand, Win-Rate, Sharpe Ratio, offene Positionen etc."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trades",
+      "item": [
+        {
+          "name": "Alle Trades abrufen",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/trades?limit=50&offset=0",
+              "query": [
+                { "key": "limit",    "value": "50" },
+                { "key": "offset",   "value": "0" },
+                { "key": "status",   "value": "", "disabled": true },
+                { "key": "platform", "value": "", "disabled": true }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Trade-Historie. Optionale Filter: status (open/closed/failed), platform (kalshi/polymarket)"
+          }
+        },
+        {
+          "name": "Offene Trades abrufen",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades?status=open",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Nur Kalshi Trades",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/trades?platform=kalshi",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Scanner",
+      "item": [
+        {
+          "name": "Scanner-Ergebnisse abrufen",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/scanner/results",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Die zuletzt gefundenen Maerkte mit Edge-Score."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wissensbasis",
+      "item": [
+        {
+          "name": "Alle Lektionen abrufen",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/knowledge",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Bot-Lernprotokoll: alle analysierten Verlust-Trades mit Lektionen."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Einstellungen",
+      "item": [
+        {
+          "name": "Einstellungen abrufen",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/settings",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }]
+          }
+        },
+        {
+          "name": "Einstellungen speichern",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/settings",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type",  "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"min_edge_pct\": \"4\",\n  \"max_position_pct\": \"5\",\n  \"max_concurrent_trades\": \"15\",\n  \"max_daily_loss_pct\": \"15\",\n  \"max_drawdown_pct\": \"8\",\n  \"kelly_fraction\": \"0.25\",\n  \"scan_interval_minutes\": \"15\",\n  \"daily_api_cost_limit\": \"50\"\n}"
+            },
+            "description": "Bot-Parameter anpassen. Nur Admin."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Team",
+      "item": [
+        {
+          "name": "Team-Mitglieder abrufen",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/team",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "description": "Alle Team-Mitglieder. Nur Admin."
+          }
+        }
+      ]
+    }
+  ]
+}

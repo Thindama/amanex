@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Amanex</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0}:root{--bg:#0f0f18;--surface:#16161f;--card:#1c1c28;--border:rgba(255,255,255,0.07);--text:#f0f0f5;--muted:#6b6b80;--sub:#2a2a38;--blue:#4f8eff;--green:#00d68f;--red:#ff4d6a;--yellow:#f5a623}body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--text);font-size:13px;overflow:hidden}.app{display:flex;height:100vh}.sidebar{width:210px;min-width:210px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;transition:transform .25s}.logo{padding:22px 20px 18px;border-bottom:1px solid var(--border)}.logo-top{font-size:20px;letter-spacing:2px;color:var(--blue);text-transform:uppercase;font-family:'JetBrains Mono',monospace;font-weight:600}.logo-name{font-size:11px;font-weight:400;margin-top:4px;color:var(--text);letter-spacing:1px;text-transform:uppercase}.nav{padding:16px 12px;flex:1;overflow-y:auto}.nav-group{margin-bottom:20px}.nav-sec{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;padding:0 8px;margin-bottom:8px}.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:pointer;color:var(--muted);font-size:13px;transition:all .15s;margin-bottom:2px;user-select:none}.nav-item:hover{background:var(--card);color:var(--text)}.nav-item.active{background:rgba(79,142,255,.12);color:var(--blue);font-weight:500}.sf{padding:16px;border-top:1px solid var(--border)}.bot-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:blink 1.8s infinite}@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}.bot-label{font-size:12px;color:var(--green);font-weight:500}.bot-time{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-left:auto}.kill{width:100%;padding:8px 12px;background:rgba(255,77,106,.08);border:1px solid rgba(255,77,106,.2);border-radius:7px;color:var(--red);font-size:12px;font-weight:500;font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s;text-align:center}.kill:hover{background:rgba(255,77,106,.15)}.main{flex:1;display:flex;flex-direction:column;overflow:hidden}.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);gap:12px}.page-title{font-size:16px;font-weight:600}.page-meta{font-size:11px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace}.topbar-right{display:flex;align-items:center;gap:10px;flex-shrink:0}.lang{display:flex;background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden}.lang-btn{padding:5px 11px;font-size:11px;font-family:'Inter',sans-serif;cursor:pointer;color:var(--muted);background:none;border:none;transition:all .15s}.lang-btn.on{background:var(--blue);color:#fff}.ava{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}.notif-wrap{position:relative;cursor:pointer}.notif-bell{width:30px;height:30px;border-radius:7px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px}.notif-bell:hover{border-color:var(--blue)}.notif-count{position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--red);border-radius:50%;font-size:9px;font-weight:600;display:flex;align-items:center;justify-content:center;color:#fff;border:2px solid var(--bg)}.notif-dropdown{display:none;position:absolute;top:38px;right:0;width:300px;background:var(--card);border:1px solid var(--border);border-radius:10px;z-index:200;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.4)}.notif-dropdown.open{display:block}.notif-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border)}.notif-item{display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);transition:background .15s}.notif-item:last-child{border-bottom:none}.notif-item.unread{background:rgba(79,142,255,.04)}.notif-item:hover{background:var(--surface)}.notif-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}.ni-green{background:rgba(0,214,143,.1)}.ni-red{background:rgba(255,77,106,.1)}.ni-blue{background:rgba(79,142,255,.1)}.ni-yellow{background:rgba(245,166,35,.1)}.notif-text{font-size:12px;line-height:1.4}.notif-time{font-size:10px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace}.hamburger{display:none;flex-direction:column;gap:4px;cursor:pointer;padding:6px;background:none;border:none}.hamburger span{width:20px;height:2px;background:var(--muted);border-radius:2px}.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50}.overlay.open{display:block}.page{display:none;flex:1;overflow-y:auto;padding:22px 24px;flex-direction:column;gap:16px}.page.active{display:flex}.page::-webkit-scrollbar{width:3px}.page::-webkit-scrollbar-thumb{background:var(--sub);border-radius:2px}.row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}.row-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px}.card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}.card-title{font-size:13px;font-weight:500}.mcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px}.mlabel{font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.8px}.mval{font-size:22px;font-weight:600;font-family:'JetBrains Mono',monospace;line-height:1;margin-bottom:4px}.msub{font-size:11px;font-family:'JetBrains Mono',monospace}.badge{font-size:10px;padding:3px 9px;border-radius:20px;font-family:'JetBrains Mono',monospace;white-space:nowrap}.b-green{background:rgba(0,214,143,.1);color:var(--green);border:1px solid rgba(0,214,143,.2)}.b-red{background:rgba(255,77,106,.1);color:var(--red);border:1px solid rgba(255,77,106,.2)}.b-blue{background:rgba(79,142,255,.1);color:var(--blue);border:1px solid rgba(79,142,255,.2)}.b-yellow{background:rgba(245,166,35,.1);color:var(--yellow);border:1px solid rgba(245,166,35,.2)}.c-green{color:var(--green)}.c-blue{color:var(--blue)}.c-yellow{color:var(--yellow)}.c-red{color:var(--red)}.c-muted{color:var(--muted)}.bars{display:flex;align-items:flex-end;gap:4px;height:90px}.bar{flex:1;border-radius:3px 3px 0 0;min-height:4px}.bar-g{background:var(--green);opacity:.7}.bar-r{background:var(--red);opacity:.7}.bar-days{display:flex;gap:4px;margin-top:6px}.bar-day{flex:1;text-align:center;font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace}.risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.risk-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px}.risk-name{font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}.risk-val{font-size:16px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-bottom:6px}.risk-track{height:3px;background:var(--sub);border-radius:2px;overflow:hidden}.risk-fill{height:100%;border-radius:2px}.trade-list{display:flex;flex-direction:column;gap:7px}.trade{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)}.side{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace;min-width:34px;text-align:center}.s-yes{background:rgba(0,214,143,.1);color:var(--green)}.s-no{background:rgba(255,77,106,.1);color:var(--red)}.t-name{flex:1;font-size:12px}.t-plat{font-size:10px;color:var(--muted)}.t-pnl{font-size:13px;font-weight:500;font-family:'JetBrains Mono',monospace;white-space:nowrap}.ai-list{display:flex;flex-direction:column;gap:10px}.ai-row{display:flex;align-items:center;gap:10px}.ai-name{font-size:11px;color:var(--muted);min-width:90px}.ai-track{flex:1;height:5px;background:var(--sub);border-radius:3px;overflow:hidden}.ai-fill{height:100%;border-radius:3px}.ai-pct{font-size:11px;font-family:'JetBrains Mono',monospace;min-width:32px;text-align:right}.consensus{margin-top:14px;padding:11px 14px;background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.12);border-radius:8px;display:flex;justify-content:space-between;align-items:center}.toggle-circle{width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;border:3px solid;font-size:13px;font-weight:600;user-select:none}.tc-on{background:rgba(0,214,143,.1);border-color:var(--green);color:var(--green)}.tc-off{background:rgba(255,77,106,.1);border-color:var(--red);color:var(--red)}.param-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}.param-row:last-child{border-bottom:none}.param-name{font-size:12px;font-weight:500}.param-desc{font-size:10px;color:var(--muted);margin-top:3px}.param-right{display:flex;align-items:center;gap:10px;flex-shrink:0}.param-val{font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--blue);min-width:40px;text-align:right}input[type=range]{-webkit-appearance:none;height:4px;background:var(--sub);border-radius:2px;outline:none;cursor:pointer;width:90px}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--blue);cursor:pointer}.kelly-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.kelly-opt{padding:10px;border-radius:7px;border:1px solid var(--border);cursor:pointer;text-align:center;transition:all .2s;background:var(--surface)}.kelly-opt.on{border-color:var(--blue);background:rgba(79,142,255,.08)}.kelly-opt-name{font-size:12px;font-weight:500}.kelly-opt-sub{font-size:10px;color:var(--muted);margin-top:2px}.data-table{width:100%;border-collapse:collapse}.data-table th{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-align:left;padding:0 10px 10px;border-bottom:1px solid var(--border);white-space:nowrap}.data-table td{padding:10px;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle}.data-table tr:hover td{background:rgba(79,142,255,.03)}.edge-wrap{height:4px;background:var(--sub);border-radius:2px;width:60px;overflow:hidden;display:inline-block;vertical-align:middle}.edge-fill{height:100%;border-radius:2px;background:var(--blue)}.table-wrap{overflow-x:auto}.perf-chart{height:130px;display:flex;align-items:flex-end;gap:5px}.perf-bar{flex:1;border-radius:3px 3px 0 0;min-height:4px;background:var(--blue);opacity:.7}.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.stat-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px}.stat-name{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}.stat-val{font-size:18px;font-weight:600;font-family:'JetBrains Mono',monospace;margin-bottom:4px}.brier-wrap{height:6px;background:var(--sub);border-radius:3px;overflow:hidden;margin-top:6px}.brier-fill{height:100%;border-radius:3px;background:var(--green)}.team-item{display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--surface);border-radius:8px;border:1px solid var(--border);margin-bottom:8px}.team-ava{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}.r-admin{font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(79,142,255,.1);color:var(--blue);border:1px solid rgba(79,142,255,.2)}.r-viewer{font-size:10px;padding:3px 10px;border-radius:20px;background:rgba(107,107,128,.1);color:var(--muted);border:1px solid var(--border)}.remove-btn{padding:4px 10px;border-radius:5px;border:1px solid rgba(255,77,106,.2);background:none;color:var(--red);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;margin-left:auto}.field-input{width:100%;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none}.field-input:focus{border-color:var(--blue)}.api-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px}.api-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}.key-input{flex:1;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace;outline:none;min-width:0}.key-input:focus{border-color:var(--blue);color:var(--text)}.key-btn{padding:7px 12px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;transition:all .15s}.key-btn:hover{border-color:var(--blue);color:var(--blue)}.plat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px}.plat-logo{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;margin-bottom:14px}.wd-btn{width:100%;padding:10px;border:none;border-radius:8px;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;margin-top:14px;transition:opacity .15s}.wd-btn:hover{opacity:.85}.step-item{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;background:var(--card);border-radius:6px;margin-bottom:6px}.step-num{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}.learn-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:8px}.filter-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.filter-btn{padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;white-space:nowrap}.filter-btn.on{background:rgba(79,142,255,.12);border-color:var(--blue);color:var(--blue)}.action-btn{padding:6px 14px;border-radius:6px;border:none;background:var(--blue);color:#fff;font-size:11px;font-weight:500;cursor:pointer;font-family:'Inter',sans-serif}.save-btn{width:100%;padding:11px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s;margin-top:14px}.save-btn:hover{opacity:.85}@media(max-width:768px){body{overflow:auto}.app{flex-direction:column;height:auto;min-height:100vh}.sidebar{position:fixed;top:0;left:0;height:100vh;z-index:60;transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{width:100%;min-height:100vh}.hamburger{display:flex}.topbar{padding:12px 16px}.page{padding:16px;max-height:calc(100vh - 60px)}.row-2,.row-3,.row-4{grid-template-columns:1fr}.row-4{grid-template-columns:1fr 1fr}.risk-grid,.stat-grid,.kelly-opts{grid-template-columns:1fr 1fr}.notif-dropdown{right:-60px;width:280px}}</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"></div>
+<div class="app">
+<div class="sidebar" id="sidebar">
+  <div class="logo"><div class="logo-top">Amanex</div><div class="logo-name">Dashboard</div></div>
+  <div class="nav">
+    <div class="nav-group">
+      <div class="nav-sec">Uebersicht</div>
+      <div class="nav-item active" data-page="p1">&#9672;&nbsp; Live Dashboard</div>
+      <div class="nav-item" data-page="p2">&#9678;&nbsp; Bot-Steuerung</div>
+      <div class="nav-item" data-page="p3">&#9643;&nbsp; Markt-Scanner</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-sec">Analyse</div>
+      <div class="nav-item" data-page="p4">&#9719;&nbsp; Trade-Historie</div>
+      <div class="nav-item" data-page="p5">&#9723;&nbsp; Performance</div>
+      <div class="nav-item" data-page="p6">&#9673;&nbsp; Wissensbasis</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-sec">System</div>
+      <div class="nav-item" data-page="p7">&#9672;&nbsp; Auszahlung</div>
+      <div class="nav-item" data-page="p8">&#9681;&nbsp; Team</div>
+      <div class="nav-item" data-page="p9">&#9644;&nbsp; API-Keys</div>
+    </div>
+  </div>
+  <div class="sf">
+    <div class="bot-row">
+      <div class="dot" id="bot-dot"></div>
+      <div class="bot-label" id="bot-label">Bot aktiv</div>
+      <div class="bot-time" id="bot-time">--:--</div>
+    </div>
+    <div class="kill" id="kill-btn">KILL SWITCH</div>
+  </div>
+</div>
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px;min-width:0">
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      <div><div class="page-title" id="pg-title">Live Dashboard</div><div class="page-meta" id="pg-meta">Letzter Scan: vor 4 Min.</div></div>
+    </div>
+    <div class="topbar-right">
+      <div class="lang"><button class="lang-btn on" id="btn-de">DE</button><button class="lang-btn" id="btn-en">EN</button></div>
+      <div class="notif-wrap" id="notif-wrap">
+        <div class="notif-bell" id="notif-bell">&#128276;</div>
+        <div class="notif-count" id="notif-count">3</div>
+        <div class="notif-dropdown" id="notif-drop">
+          <div class="notif-head"><span style="font-size:12px;font-weight:500" id="nt-title">Benachrichtigungen</span><span style="font-size:11px;color:var(--blue);cursor:pointer" id="nt-clear">Alle loeschen</span></div>
+          <div id="notif-list">
+            <div class="notif-item unread"><div class="notif-icon ni-green">&#10003;</div><div><div class="notif-text">Trade ausgefuehrt: EZB Zinsen JA - +124 EUR</div><div class="notif-time">vor 8 Min.</div></div></div>
+            <div class="notif-item unread"><div class="notif-icon ni-red">!</div><div><div class="notif-text">Trade verloren: Fed Zinsen - -43 EUR</div><div class="notif-time">vor 1 Std.</div></div></div>
+            <div class="notif-item unread"><div class="notif-icon ni-yellow">!</div><div><div class="notif-text">Exposure bei 75% - nah am Limit</div><div class="notif-time">vor 2 Std.</div></div></div>
+            <div class="notif-item"><div class="notif-icon ni-blue">&#9672;</div><div><div class="notif-text">Scanner: 312 Maerkte, 8 Chancen</div><div class="notif-time">vor 4 Min.</div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="ava">AM</div>
+    </div>
+  </div>
+
+  <!-- P1: DASHBOARD -->
+  <div class="page active" id="p1">
+    <div class="row-4">
+      <div class="mcard"><div class="mlabel">Kontostand</div><div class="mval c-green">12.847 EUR</div><div class="msub c-green">+847 EUR heute</div></div>
+      <div class="mcard"><div class="mlabel">Win-Rate (90T)</div><div class="mval c-blue">68.4%</div><div class="msub c-muted">Ziel: 60%+</div></div>
+      <div class="mcard"><div class="mlabel">Offene Positionen</div><div class="mval c-yellow">7 / 15</div><div class="msub c-muted">Max. 15</div></div>
+      <div class="mcard"><div class="mlabel">Sharpe Ratio</div><div class="mval c-green">2.14</div><div class="msub c-green">Ausgezeichnet</div></div>
+    </div>
+    <div class="row-2">
+      <div class="card">
+        <div class="card-head"><div class="card-title">P&amp;L letzte 14 Tage</div><div class="badge b-green">+2.847 EUR gesamt</div></div>
+        <div class="bars" id="pnl-bars"></div>
+        <div class="bar-days" id="pnl-days"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Risiko-Monitor</div><div class="badge b-green">Alles OK</div></div>
+        <div class="risk-grid">
+          <div class="risk-item"><div class="risk-name">Tagesverlust</div><div class="risk-val c-green">+6.6%</div><div class="risk-track"><div class="risk-fill" style="width:44%;background:var(--green)"></div></div></div>
+          <div class="risk-item"><div class="risk-name">Drawdown</div><div class="risk-val c-yellow">2.1%</div><div class="risk-track"><div class="risk-fill" style="width:26%;background:var(--yellow)"></div></div></div>
+          <div class="risk-item"><div class="risk-name">Exposure</div><div class="risk-val c-blue">11.2%</div><div class="risk-track"><div class="risk-fill" style="width:75%;background:var(--blue)"></div></div></div>
+          <div class="risk-item"><div class="risk-name">API-Kosten</div><div class="risk-val c-blue">$18</div><div class="risk-track"><div class="risk-fill" style="width:36%;background:var(--blue)"></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Letzte Trades</div><div class="badge b-blue">Live</div></div>
+        <div class="trade-list">
+          <div class="trade"><div class="side s-yes">JA</div><div style="flex:1"><div class="t-name">EZB senkt Zinsen April</div><div class="t-plat">Kalshi - vor 8 Min.</div></div><div class="t-pnl c-green">+124 EUR</div></div>
+          <div class="trade"><div class="side s-no">NEIN</div><div style="flex:1"><div class="t-name">BTC ueber 95k bis 1. April</div><div class="t-plat">Polymarket - vor 23 Min.</div></div><div class="t-pnl c-green">+87 EUR</div></div>
+          <div class="trade"><div class="side s-yes">JA</div><div style="flex:1"><div class="t-name">Fed haelt Zinsen stabil</div><div class="t-plat">Kalshi - vor 1 Std.</div></div><div class="t-pnl c-red">-43 EUR</div></div>
+          <div class="trade"><div class="side s-yes">JA</div><div style="flex:1"><div class="t-name">Apple Q2 schlaegt Erwartungen</div><div class="t-plat">Polymarket - vor 2 Std.</div></div><div class="t-pnl c-green">+201 EUR</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">KI-Konsens</div><div class="badge b-green">Edge +7.2%</div></div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:JetBrains Mono,monospace">EZB senkt Zinsen April - JA @ 0.62</div>
+        <div class="ai-list">
+          <div class="ai-row"><div class="ai-name">Grok (30%)</div><div class="ai-track"><div class="ai-fill" style="width:71%;background:var(--blue)"></div></div><div class="ai-pct c-blue">71%</div></div>
+          <div class="ai-row"><div class="ai-name">Claude (20%)</div><div class="ai-track"><div class="ai-fill" style="width:68%;background:var(--green)"></div></div><div class="ai-pct c-green">68%</div></div>
+          <div class="ai-row"><div class="ai-name">GPT-4o (20%)</div><div class="ai-track"><div class="ai-fill" style="width:74%;background:var(--yellow)"></div></div><div class="ai-pct c-yellow">74%</div></div>
+          <div class="ai-row"><div class="ai-name">Gemini (15%)</div><div class="ai-track"><div class="ai-fill" style="width:65%;background:var(--muted)"></div></div><div class="ai-pct c-muted">65%</div></div>
+          <div class="ai-row"><div class="ai-name">DeepSeek (15%)</div><div class="ai-track"><div class="ai-fill" style="width:69%;background:var(--muted)"></div></div><div class="ai-pct c-muted">69%</div></div>
+        </div>
+        <div class="consensus"><span style="font-size:11px;color:var(--muted)">Gewichteter Konsens</span><span style="font-size:20px;font-weight:600;font-family:JetBrains Mono,monospace;color:var(--green)">69.2%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P2: BOT-STEUERUNG -->
+  <div class="page" id="p2">
+    <div class="row-3">
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:24px 18px">
+        <div style="width:100%;display:flex;justify-content:space-between;align-items:center"><div class="card-title">Bot-Status</div><div class="badge b-green" id="s-badge">Aktiv</div></div>
+        <div class="toggle-circle tc-on" id="big-toggle">AN</div>
+        <div style="text-align:center"><div style="font-size:15px;font-weight:600" id="s-status">Bot laeuft</div><div style="font-size:11px;color:var(--muted);font-family:JetBrains Mono,monospace;margin-top:4px" id="s-sub">Seit 4h 32min</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Scan-Einstellungen</div></div>
+        <div class="param-row"><div style="flex:1"><div class="param-name">Scan-Intervall</div><div class="param-desc">Wie oft der Scanner laeuft</div></div><div class="param-right"><input type="range" min="5" max="60" value="15" step="5" oninput="ge('v1').textContent=this.value+' Min'"><div class="param-val" id="v1">15 Min</div></div></div>
+        <div class="param-row"><div style="flex:1"><div class="param-name">Aktive Stunden</div><div class="param-desc">Trading-Zeitfenster</div></div><div class="param-right"><input type="range" min="1" max="24" value="24" step="1" oninput="ge('v2').textContent=this.value+'h'"><div class="param-val" id="v2">24h</div></div></div>
+        <div class="param-row"><div style="flex:1"><div class="param-name">Max. API-Kosten/Tag</div><div class="param-desc">Automatischer Stopp</div></div><div class="param-right"><input type="range" min="10" max="100" value="50" step="5" oninput="ge('v3').textContent='$'+this.value"><div class="param-val" id="v3">$50</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Kelly-Modus</div></div>
+        <div style="text-align:center;padding:10px 0 4px"><div style="font-size:32px;font-weight:600;font-family:JetBrains Mono,monospace;color:var(--green)" id="kelly-pct">25%</div><div style="font-size:11px;color:var(--muted);margin-top:4px">des Kelly-Wertes</div></div>
+        <div class="kelly-opts">
+          <div class="kelly-opt" onclick="setKelly('100%',this)"><div class="kelly-opt-name">Voll (100%)</div><div class="kelly-opt-sub">Max. Wachstum</div></div>
+          <div class="kelly-opt" onclick="setKelly('50%',this)"><div class="kelly-opt-name">Halb (50%)</div><div class="kelly-opt-sub">Ausgewogen</div></div>
+          <div class="kelly-opt on" onclick="setKelly('25%',this)"><div class="kelly-opt-name">Viertel (25%)</div><div class="kelly-opt-sub">Empfohlen</div></div>
+          <div class="kelly-opt" onclick="setKelly('12%',this)"><div class="kelly-opt-name">Achtel (12%)</div><div class="kelly-opt-sub">Konservativ</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Risikoparameter</div></div>
+        <div class="param-row"><div style="flex:1"><div class="param-name">Min. Edge fuer Trade</div><div class="param-desc">KI muss Marktpreis um X% uebertreffen</div></div><div class="param-right"><input type="range" min="2" max="15" value="4" step="1" oninput="ge('pv1').textContent=this.value+'%'"><div class="param-val" id="pv1">4%</div></div></div>
+        <div class="param-row"><div style="flex:1"><div class="param-name">Max. pro Trade</div><div class="param-desc">Maximaler Einsatz pro Trade</div></div><div class="param-right"><input type="range" min="1" max="10" value="5" step="1" oninput="ge('pv2').textContent=this.value+'%'"><div class="param-val" id="pv2">5%</div></div></div>
+        <div class="param-row"><div style="flex:1"><div class="param-name">Max. gleichzeitige Trades</div><div class="param-desc">Offene Positionen gleichzeitig</div></div><div class="param-right"><input type="range" min="1" max="20" value="15" step="1" oninput="ge('pv3').textContent=this.value"><div class="param-val" id="pv3">15</div></div></div>
+        <div class="param-row"><div style="flex:1"><div class="param-name">Tagesverlust-Limit</div><div class="param-desc">Bot pausiert bei Ueberschreitung</div></div><div class="param-right"><input type="range" min="5" max="30" value="15" step="1" oninput="ge('pv4').textContent=this.value+'%'"><div class="param-val" id="pv4">15%</div></div></div>
+        <div class="param-row"><div style="flex:1"><div class="param-name">Max. Drawdown</div><div class="param-desc">Alle Trades blockiert bei Ueberschreitung</div></div><div class="param-right"><input type="range" min="2" max="20" value="8" step="1" oninput="ge('pv5').textContent=this.value+'%'"><div class="param-val" id="pv5">8%</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Aktive Plattformen</div></div>
+        <div class="row-2" style="margin-bottom:16px">
+          <div style="padding:12px;border-radius:8px;border:1px solid var(--blue);background:rgba(79,142,255,.07);cursor:pointer"><div style="font-size:13px;font-weight:500">Kalshi</div><div style="font-size:10px;color:var(--muted);margin-top:3px">US-reguliert</div></div>
+          <div style="padding:12px;border-radius:8px;border:1px solid var(--blue);background:rgba(79,142,255,.07);cursor:pointer"><div style="font-size:13px;font-weight:500">Polymarket</div><div style="font-size:10px;color:var(--muted);margin-top:3px">Crypto - CLOB</div></div>
+        </div>
+        <div class="card-head" style="margin-bottom:10px"><div class="card-title">KI-Modelle</div></div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)"><span style="font-size:12px">Grok (30%)</span><div class="badge b-green">Aktiv</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)"><span style="font-size:12px">Claude Sonnet (20%)</span><div class="badge b-green">Aktiv</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)"><span style="font-size:12px">GPT-4o (20%)</span><div class="badge b-green">Aktiv</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)"><span style="font-size:12px">Gemini Flash (15%)</span><div class="badge b-green">Aktiv</div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface);border-radius:7px;border:1px solid var(--border)"><span style="font-size:12px">DeepSeek (15%)</span><div class="badge b-green">Aktiv</div></div>
+        </div>
+        <button class="save-btn" id="save-settings" onclick="saveBtnClick(this,'Einstellungen speichern','Gespeichert')">Einstellungen speichern</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- P3: MARKT-SCANNER -->
+  <div class="page" id="p3">
+    <div class="row-4">
+      <div class="mcard"><div class="mlabel">Gescannte Maerkte</div><div class="mval c-blue">312</div><div class="msub c-muted">07:37</div></div>
+      <div class="mcard"><div class="mlabel">Chancen gefunden</div><div class="mval c-green">8</div><div class="msub c-green">Bereit</div></div>
+      <div class="mcard"><div class="mlabel">Ø Edge</div><div class="mval c-yellow">5.8%</div><div class="msub c-muted">Min. 4%</div></div>
+      <div class="mcard"><div class="mlabel">Naechster Scan</div><div class="mval c-blue">11 Min</div><div class="msub c-muted">Automatisch</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Aktive Maerkte</div>
+        <div class="filter-row">
+          <button class="filter-btn on" onclick="filterMkts('all',this)">Alle</button>
+          <button class="filter-btn" onclick="filterMkts('kalshi',this)">Kalshi</button>
+          <button class="filter-btn" onclick="filterMkts('poly',this)">Polymarket</button>
+          <button class="filter-btn" onclick="filterMkts('edge5',this)">Edge &gt; 5%</button>
+          <button class="action-btn" id="scan-now-btn" onclick="doScan(this)">Jetzt scannen</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Markt</th><th>Plattform</th><th>Marktpreis</th><th>KI-Schaetzung</th><th>Edge</th><th>Volumen</th><th>Ablauf</th><th>Status</th></tr></thead><tbody id="mkt-body"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- P4: TRADE-HISTORIE -->
+  <div class="page" id="p4">
+    <div class="row-4">
+      <div class="mcard"><div class="mlabel">Trades gesamt</div><div class="mval c-blue">312</div><div class="msub c-muted">90 Tage</div></div>
+      <div class="mcard"><div class="mlabel">Gewonnen</div><div class="mval c-green">213</div><div class="msub c-green">68.4%</div></div>
+      <div class="mcard"><div class="mlabel">Verloren</div><div class="mval c-red">99</div><div class="msub c-red">31.6%</div></div>
+      <div class="mcard"><div class="mlabel">Gesamtgewinn</div><div class="mval c-green">+4.120 EUR</div><div class="msub c-green">Netto</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div class="card-title">Alle Trades</div>
+        <div class="filter-row">
+          <button class="filter-btn on" onclick="filterTrades('all',this)">Alle</button>
+          <button class="filter-btn" onclick="filterTrades('won',this)">Gewonnen</button>
+          <button class="filter-btn" onclick="filterTrades('lost',this)">Verloren</button>
+          <button class="filter-btn" onclick="filterTrades('kalshi',this)">Kalshi</button>
+          <button class="filter-btn" onclick="filterTrades('poly',this)">Polymarket</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Datum</th><th>Markt</th><th>Plattform</th><th>Seite</th><th>Einsatz</th><th>KI-Prognose</th><th>Ergebnis</th><th>P&amp;L</th></tr></thead><tbody id="hist-body"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- P5: PERFORMANCE -->
+  <div class="page" id="p5">
+    <div class="row-4">
+      <div class="mcard"><div class="mlabel">Win-Rate</div><div class="mval c-green">68.4%</div><div class="msub c-green">Ziel: 60%+</div></div>
+      <div class="mcard"><div class="mlabel">Sharpe Ratio</div><div class="mval c-green">2.14</div><div class="msub c-green">Ausgezeichnet</div></div>
+      <div class="mcard"><div class="mlabel">Max. Drawdown</div><div class="mval c-yellow">-4.2%</div><div class="msub c-muted">Limit: 8%</div></div>
+      <div class="mcard"><div class="mlabel">Profit Factor</div><div class="mval c-green">1.87</div><div class="msub c-green">Ziel: 1.5+</div></div>
+    </div>
+    <div class="row-2">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Kumulativer Gewinn (90T)</div><div class="badge b-green">+4.120 EUR</div></div>
+        <div class="perf-chart" id="perf-chart"></div>
+        <div class="bar-days" id="perf-days"></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Kalibrierung (Brier Score)</div><div class="badge b-green">0.18</div></div>
+        <div class="stat-grid">
+          <div class="stat-item"><div class="stat-name">Gesamt</div><div class="stat-val c-green">0.18</div><div class="brier-wrap"><div class="brier-fill" style="width:82%"></div></div></div>
+          <div class="stat-item"><div class="stat-name">Grok</div><div class="stat-val c-blue">0.16</div><div class="brier-wrap"><div class="brier-fill" style="width:84%"></div></div></div>
+          <div class="stat-item"><div class="stat-name">Claude</div><div class="stat-val c-green">0.17</div><div class="brier-wrap"><div class="brier-fill" style="width:83%"></div></div></div>
+          <div class="stat-item"><div class="stat-name">GPT-4o</div><div class="stat-val c-yellow">0.21</div><div class="brier-wrap"><div class="brier-fill" style="width:79%"></div></div></div>
+          <div class="stat-item"><div class="stat-name">Gemini</div><div class="stat-val c-yellow">0.22</div><div class="brier-wrap"><div class="brier-fill" style="width:78%"></div></div></div>
+          <div class="stat-item"><div class="stat-name">DeepSeek</div><div class="stat-val c-green">0.19</div><div class="brier-wrap"><div class="brier-fill" style="width:81%"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P6: WISSENSBASIS -->
+  <div class="page" id="p6">
+    <div class="row-4">
+      <div class="mcard"><div class="mlabel">Lektionen gesamt</div><div class="mval c-blue">47</div><div class="msub c-muted">90 Tage</div></div>
+      <div class="mcard"><div class="mlabel">Schlechte Prognose</div><div class="mval c-red">18</div><div class="msub c-red">38%</div></div>
+      <div class="mcard"><div class="mlabel">Schlechtes Timing</div><div class="mval c-yellow">14</div><div class="msub c-yellow">30%</div></div>
+      <div class="mcard"><div class="mlabel">Externer Schock</div><div class="mval c-muted">15</div><div class="msub c-muted">32%</div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Bot-Lernprotokoll</div><div class="badge b-blue">47 Eintraege</div></div>
+      <div class="learn-item"><div class="badge b-red" style="margin-bottom:8px;display:inline-block">Schlechte Prognose</div><div style="font-size:12px;line-height:1.6">Krypto-Maerkte reagieren staerker auf Social-Media-Sentiment. Grok-Gewichtung auf 40% erhoehen.</div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:JetBrains Mono,monospace">28.03.2026 - Trade: BTC ueber 90k - Verlust: -43 EUR</div></div>
+      <div class="learn-item"><div class="badge b-yellow" style="margin-bottom:8px;display:inline-block">Schlechtes Timing</div><div style="font-size:12px;line-height:1.6">EZB-Entscheidungen sollten fruehestens 48h vor dem Termin gehandelt werden.</div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:JetBrains Mono,monospace">25.03.2026 - Trade: EZB Zinsen Maerz - Verlust: -67 EUR</div></div>
+      <div class="learn-item"><div class="badge b-blue" style="margin-bottom:8px;display:inline-block">Externer Schock</div><div style="font-size:12px;line-height:1.6">Unerwartete Zentralbank-Aussagen koennen Maerkte in Minuten um 20%+ verschieben. Stop-Loss auf 3% setzen.</div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:JetBrains Mono,monospace">20.03.2026 - Trade: Fed Statement - Verlust: -112 EUR</div></div>
+      <div class="learn-item"><div class="badge b-red" style="margin-bottom:8px;display:inline-block">Schlechte Prognose</div><div style="font-size:12px;line-height:1.6">Reddit-Sentiment fuer Earnings ist weniger verlasslich als Twitter/X. Reddit-Gewichtung reduzieren.</div><div style="font-size:10px;color:var(--muted);margin-top:6px;font-family:JetBrains Mono,monospace">15.03.2026 - Trade: NVIDIA Q4 - Verlust: -88 EUR</div></div>
+    </div>
+  </div>
+
+  <!-- P7: AUSZAHLUNG -->
+  <div class="page" id="p7">
+    <div class="row-2">
+      <div class="plat-card">
+        <div class="plat-logo" style="background:#2ecc71">KA</div>
+        <div style="font-size:12px;color:var(--muted)">Kalshi Guthaben</div>
+        <div style="font-size:28px;font-weight:600;font-family:JetBrains Mono,monospace;color:var(--green);margin:8px 0 4px">$8.240</div>
+        <div style="font-size:11px;color:var(--muted)">ca. 7.620 EUR - Verfuegbar</div>
+        <div style="margin-top:14px;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Auszahlungsmethode</div>
+          <div style="font-size:13px;font-weight:500">Bankkonto (ACH/Wire)</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">IBAN: DE** **** **** **** **12</div>
+        </div>
+        <button class="wd-btn" style="background:var(--green);color:#000;font-weight:700" onclick="alert('Weiterleitung zu kalshi.com/withdraw')">Auf Kalshi auszahlen</button>
+        <div style="margin-top:12px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:500">So geht es:</div>
+          <div class="step-item"><div class="step-num" style="background:rgba(0,214,143,.15);color:var(--green)">1</div><div style="font-size:11px;color:var(--muted)">kalshi.com oeffnen - Account - Withdraw</div></div>
+          <div class="step-item"><div class="step-num" style="background:rgba(0,214,143,.15);color:var(--green)">2</div><div style="font-size:11px;color:var(--muted)">Betrag eingeben und Bankkonto waehlen</div></div>
+          <div class="step-item"><div class="step-num" style="background:rgba(0,214,143,.15);color:var(--green)">3</div><div style="font-size:11px;color:var(--muted)">Bestaetigen - Ueberweisung in 1-3 Werktagen</div></div>
+        </div>
+      </div>
+      <div class="plat-card">
+        <div class="plat-logo" style="background:#9b59b6">PM</div>
+        <div style="font-size:12px;color:var(--muted)">Polymarket Wallet</div>
+        <div style="font-size:28px;font-weight:600;font-family:JetBrains Mono,monospace;color:var(--green);margin:8px 0 4px">$4.607</div>
+        <div style="font-size:11px;color:var(--muted)">ca. 4.260 EUR - USDC auf Polygon</div>
+        <div style="margin-top:14px;padding:12px;background:var(--card);border-radius:8px;border:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Wallet-Adresse</div>
+          <div style="font-size:11px;font-family:JetBrains Mono,monospace;color:var(--blue)">0x1a2b...8f9e</div>
+          <div style="font-size:10px;color:var(--muted);margin-top:3px">Polygon Network - USDC</div>
+        </div>
+        <button class="wd-btn" style="background:#9b59b6;color:#fff" onclick="alert('Weiterleitung zu app.polymarket.com')">Auf Polymarket auszahlen</button>
+        <div style="margin-top:12px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:500">So geht es:</div>
+          <div class="step-item"><div class="step-num" style="background:rgba(155,89,182,.15);color:#9b59b6">1</div><div style="font-size:11px;color:var(--muted)">USDC von Wallet auf Krypto-Boerse senden</div></div>
+          <div class="step-item"><div class="step-num" style="background:rgba(155,89,182,.15);color:#9b59b6">2</div><div style="font-size:11px;color:var(--muted)">Auf Coinbase / Kraken in EUR tauschen</div></div>
+          <div class="step-item"><div class="step-num" style="background:rgba(155,89,182,.15);color:#9b59b6">3</div><div style="font-size:11px;color:var(--muted)">EUR auf dein Bankkonto ueberweisen</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Gesamt verfuegbar</div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+        <div><div style="font-size:32px;font-weight:600;font-family:JetBrains Mono,monospace;color:var(--green)">11.880 EUR</div><div style="font-size:12px;color:var(--muted);margin-top:4px">Kalshi 7.620 EUR + Polymarket 4.260 EUR</div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="padding:12px 18px;background:var(--surface);border:1px solid var(--border);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Eingezahlt</div><div style="font-size:16px;font-weight:600;font-family:JetBrains Mono,monospace">10.000 EUR</div></div>
+          <div style="padding:12px 18px;background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.2);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Gewinn</div><div style="font-size:16px;font-weight:600;font-family:JetBrains Mono,monospace;color:var(--green)">+1.880 EUR</div></div>
+          <div style="padding:12px 18px;background:rgba(0,214,143,.06);border:1px solid rgba(0,214,143,.2);border-radius:8px;text-align:center"><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Rendite</div><div style="font-size:16px;font-weight:600;font-family:JetBrains Mono,monospace;color:var(--green)">+18.8%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P8: TEAM -->
+  <div class="page" id="p8">
+    <div class="row-2">
+      <div class="card">
+        <div class="card-head"><div class="card-title">Team-Mitglieder</div><div class="badge b-blue" id="team-count">3 aktiv</div></div>
+        <div id="team-list">
+          <div class="team-item"><div class="team-ava" style="background:linear-gradient(135deg,var(--blue),var(--green))">AM</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Aman (Du)</div><div style="font-size:11px;color:var(--muted)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="5b3a363a351b3a363a353e23753f3e">[email&#160;protected]</a></div></div><div class="r-admin">Admin</div></div>
+          <div class="team-item"><div class="team-ava" style="background:linear-gradient(135deg,var(--yellow),var(--red))">MK</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Max Kaufmann</div><div style="font-size:11px;color:var(--muted)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="90fdf1e8d0f5e8f1fde0fcf5bef3fffd">[email&#160;protected]</a></div></div><div class="r-viewer">Viewer</div><button class="remove-btn" onclick="removeTeam(this)">Entfernen</button></div>
+          <div class="team-item"><div class="team-ava" style="background:linear-gradient(135deg,var(--green),var(--blue))">SL</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Sara Lindner</div><div style="font-size:11px;color:var(--muted)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="b6c5d7c4d7f6d3ced7dbc6dad398d5d9db">[email&#160;protected]</a></div></div><div class="r-viewer">Viewer</div><button class="remove-btn" onclick="removeTeam(this)">Entfernen</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Mitglied einladen</div></div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:6px">E-Mail</div><input class="field-input" type="email" id="invite-email" placeholder="name@beispiel.com"></div>
+          <div><div style="font-size:11px;color:var(--muted);margin-bottom:8px">Rolle</div><div style="display:flex;gap:8px"><button class="filter-btn" id="r-admin" onclick="setRole('admin')">Admin</button><button class="filter-btn on" id="r-viewer" onclick="setRole('viewer')">Viewer</button></div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--muted);line-height:1.8"><span style="color:var(--blue)">Admin:</span> Voller Zugriff<br>Viewer: Nur lesen</div>
+          <button class="save-btn" id="invite-btn" onclick="sendInvite()" style="margin-top:0">Einladung senden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P9: API-KEYS -->
+  <div class="page" id="p9">
+    <div class="row-2">
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-family:JetBrains Mono,monospace;letter-spacing:1px">KI-MODELLE</div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#c0392b">AN</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Anthropic (Claude)</div><div style="font-size:10px;color:var(--muted)">20%</div></div><div class="badge b-green">Verbunden</div></div><div style="display:flex;gap:8px"><input class="key-input" type="password" value="sk-ant-xxxx" placeholder="sk-ant-..."><button class="key-btn" onclick="toggleKey(this)">Anzeigen</button><button class="key-btn" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div></div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#1a1a1a">GR</div><div style="flex:1"><div style="font-size:13px;font-weight:500">xAI (Grok)</div><div style="font-size:10px;color:var(--muted)">30%</div></div><div class="badge b-green">Verbunden</div></div><div style="display:flex;gap:8px"><input class="key-input" type="password" value="xai-xxxx" placeholder="xai-..."><button class="key-btn" onclick="toggleKey(this)">Anzeigen</button><button class="key-btn" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div></div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#10a37f">GP</div><div style="flex:1"><div style="font-size:13px;font-weight:500">OpenAI (GPT-4o)</div><div style="font-size:10px;color:var(--muted)">20%</div></div><div class="badge b-green">Verbunden</div></div><div style="display:flex;gap:8px"><input class="key-input" type="password" value="sk-xxxx" placeholder="sk-..."><button class="key-btn" onclick="toggleKey(this)">Anzeigen</button><button class="key-btn" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div></div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#4285f4">GM</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Google (Gemini)</div><div style="font-size:10px;color:var(--muted)">15%</div></div><div class="badge b-red">Nicht verbunden</div></div><div style="display:flex;gap:8px"><input class="key-input" type="password" placeholder="API Key..."><button class="key-btn" onclick="toggleKey(this)">Anzeigen</button><button class="key-btn" style="border-color:var(--blue);color:var(--blue)" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div></div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#2d5a9e">DS</div><div style="flex:1"><div style="font-size:13px;font-weight:500">DeepSeek</div><div style="font-size:10px;color:var(--muted)">15%</div></div><div class="badge b-green">Verbunden</div></div><div style="display:flex;gap:8px"><input class="key-input" type="password" value="sk-xxxx" placeholder="API Key..."><button class="key-btn" onclick="toggleKey(this)">Anzeigen</button><button class="key-btn" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;font-family:JetBrains Mono,monospace;letter-spacing:1px">MAERKTE &amp; DATEN</div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#2ecc71">KA</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Kalshi</div><div style="font-size:10px;color:var(--muted)">US-reguliert</div></div><div class="badge b-yellow">Demo-Modus</div></div><div style="display:flex;gap:8px;margin-bottom:8px"><input class="key-input" type="password" value="xxxx" placeholder="API Key..."><button class="key-btn" onclick="toggleKey(this)">Anzeigen</button></div><div style="display:flex;gap:8px;margin-bottom:8px"><input class="key-input" type="password" value="xxxx" placeholder="API Secret..."><button class="key-btn" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div><div style="display:flex;gap:8px"><button class="filter-btn on" onclick="switchMode(this)">Demo</button><button class="filter-btn" onclick="switchMode(this)">Live</button></div></div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#9b59b6">PM</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Polymarket</div><div style="font-size:10px;color:var(--muted)">Ethereum Wallet</div></div><div class="badge b-green">Verbunden</div></div><div style="display:flex;gap:8px"><input class="key-input" type="password" value="0xxxxx" placeholder="Private Key..."><button class="key-btn" onclick="toggleKey(this)">Anzeigen</button><button class="key-btn" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div></div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#1da1f2">X</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Twitter / X API</div><div style="font-size:10px;color:var(--muted)">Echtzeit-Sentiment</div></div><div class="badge b-green">Verbunden</div></div><div style="display:flex;gap:8px"><input class="key-input" type="password" value="AAAA" placeholder="Bearer Token..."><button class="key-btn" onclick="toggleKey(this)">Anzeigen</button><button class="key-btn" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div></div>
+        <div class="api-item"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><div class="api-icon" style="background:#ff4500">RD</div><div style="flex:1"><div style="font-size:13px;font-weight:500">Reddit API</div><div style="font-size:10px;color:var(--muted)">Community-Sentiment</div></div><div class="badge b-red">Nicht verbunden</div></div><div style="display:flex;gap:8px;margin-bottom:8px"><input class="key-input" type="text" placeholder="Client ID..."></div><div style="display:flex;gap:8px"><input class="key-input" type="password" placeholder="Client Secret..."><button class="key-btn" style="border-color:var(--blue);color:var(--blue)" onclick="saveBtnClick(this,'Speichern','Gespeichert')">Speichern</button></div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+
+var lang='de';
+var botOn=true;
+var selectedRole='viewer';
+var currentPage='p1';
+
+var MARKETS=[
+  {name:'EZB senkt Zinsen April',plat:'Kalshi',pc:'b-blue',mkt:'62%',ai:'69%',aiPos:true,edge:'+7.2%',ePct:72,vol:'5.400',exp:'12 Tage',status:'TRADE',sc:'b-green'},
+  {name:'BTC ueber 95k April',plat:'Polymarket',pc:'b-yellow',mkt:'41%',ai:'47%',aiPos:true,edge:'+6.1%',ePct:61,vol:'12.200',exp:'4 Tage',status:'TRADE',sc:'b-green'},
+  {name:'US Arbeitslosigkeit unter 4%',plat:'Kalshi',pc:'b-blue',mkt:'58%',ai:'64%',aiPos:true,edge:'+5.8%',ePct:58,vol:'3.800',exp:'18 Tage',status:'TRADE',sc:'b-green'},
+  {name:'Fed senkt Zinsen Mai',plat:'Kalshi',pc:'b-blue',mkt:'33%',ai:'38%',aiPos:true,edge:'+5.1%',ePct:51,vol:'8.100',exp:'29 Tage',status:'TRADE',sc:'b-green'},
+  {name:'Apple Q2 Erwartungen',plat:'Polymarket',pc:'b-yellow',mkt:'73%',ai:'76%',aiPos:false,edge:'+3.1%',ePct:30,vol:'6.500',exp:'22 Tage',status:'WATCH',sc:'b-yellow'},
+  {name:'EUR/USD ueber 1.10',plat:'Polymarket',pc:'b-yellow',mkt:'48%',ai:'50%',aiPos:false,edge:'+2.1%',ePct:20,vol:'2.200',exp:'25 Tage',status:'SKIP',sc:'b-red'}
+];
+
+var TRADES=[
+  {date:'28.03 07:29',name:'EZB senkt Zinsen April',plat:'Kalshi',pc:'b-blue',side:'JA',stake:'312',fc:'69%',won:true,pnl:'+124'},
+  {date:'28.03 07:14',name:'BTC ueber 95k',plat:'Polymarket',pc:'b-yellow',side:'NEIN',stake:'218',fc:'53%',won:true,pnl:'+87'},
+  {date:'28.03 06:51',name:'Fed haelt Zinsen stabil',plat:'Kalshi',pc:'b-blue',side:'JA',stake:'180',fc:'66%',won:false,pnl:'-43'},
+  {date:'28.03 05:22',name:'Apple Q2 Erwartungen',plat:'Polymarket',pc:'b-yellow',side:'JA',stake:'402',fc:'74%',won:true,pnl:'+201'},
+  {date:'27.03 22:10',name:'US Arbeitslosigkeit',plat:'Kalshi',pc:'b-blue',side:'JA',stake:'290',fc:'64%',won:true,pnl:'+158'},
+  {date:'27.03 19:45',name:'EUR/USD ueber 1.10',plat:'Polymarket',pc:'b-yellow',side:'NEIN',stake:'150',fc:'58%',won:false,pnl:'-67'}
+];
+
+var DE={
+  p1:'Live Dashboard',p2:'Bot-Steuerung',p3:'Markt-Scanner',p4:'Trade-Historie',p5:'Performance',p6:'Wissensbasis',p7:'Auszahlung',p8:'Team',p9:'API-Keys',
+  m1:'Letzter Scan: vor 4 Min.',m2:'Einstellungen und Risikoparameter',m3:'312 Maerkte ueberwacht',m4:'90-Tage-Uebersicht',m5:'90-Tage-Analyse',m6:'47 Lektionen',m7:'Kalshi + Polymarket',m8:'3 aktive Mitglieder',m9:'9 Dienste',
+  balance:'Kontostand',winrate:'Win-Rate (90T)',positions:'Offene Positionen',sharpe:'Sharpe Ratio',
+  botactive:'Bot aktiv',botstopped:'Bot gestoppt',kill:'KILL SWITCH',startbot:'BOT STARTEN',
+  aktiv:'Aktiv',boton:'AN',botoff:'AUS',botrunning:'Bot laeuft',botstopped2:'Manuell gestoppt',
+  saveset:'Einstellungen speichern',saved:'Gespeichert',
+  scannow:'Jetzt scannen',scanning:'Scanne...',
+  won:'Gewonnen',lost:'Verloren',wonb:'Gewonnen',lostb:'Verloren',
+  show:'Anzeigen',hide:'Verbergen',save:'Speichern',
+  rem:'Entfernen',si2:'Einladung senden',invpending:'Einladung ausstehend',
+  notiftitle:'Benachrichtigungen',notifclear:'Alle loeschen',
+  all:'Alle'
+};
+var EN={
+  p1:'Live Dashboard',p2:'Bot Control',p3:'Market Scanner',p4:'Trade History',p5:'Performance',p6:'Knowledge Base',p7:'Withdraw',p8:'Team',p9:'API Keys',
+  m1:'Last scan: 4 min ago',m2:'Settings and risk parameters',m3:'312 markets monitored',m4:'90-day overview',m5:'90-day analysis',m6:'47 lessons',m7:'Kalshi + Polymarket',m8:'3 active members',m9:'9 services',
+  balance:'Account Balance',winrate:'Win Rate (90D)',positions:'Open Positions',sharpe:'Sharpe Ratio',
+  botactive:'Bot active',botstopped:'Bot stopped',kill:'KILL SWITCH',startbot:'START BOT',
+  aktiv:'Active',boton:'ON',botoff:'OFF',botrunning:'Bot running',botstopped2:'Manually stopped',
+  saveset:'Save Settings',saved:'Saved',
+  scannow:'Scan Now',scanning:'Scanning...',
+  won:'Won',lost:'Lost',wonb:'Won',lostb:'Lost',
+  show:'Show',hide:'Hide',save:'Save',
+  rem:'Remove',si2:'Send Invitation',invpending:'Invitation pending',
+  notiftitle:'Notifications',notifclear:'Clear all',
+  all:'All'
+};
+
+function t(k){ return (lang==='de'?DE:EN)[k]||k; }
+
+function ge(id){ return document.getElementById(id); }
+
+// NAVIGATION
+document.querySelectorAll('.nav-item[data-page]').forEach(function(item){
+  item.addEventListener('click',function(){
+    var pid=this.dataset.page;
+    document.querySelectorAll('.nav-item').forEach(function(i){i.classList.remove('active');});
+    this.classList.add('active');
+    document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+    ge(pid).classList.add('active');
+    currentPage=pid;
+    var i=parseInt(pid.replace('p',''));
+    ge('pg-title').textContent=t('p'+i);
+    ge('pg-meta').textContent=t('m'+i);
+    closeSidebar();
+  });
+});
+
+// CLOCK
+function updateClock(){
+  var n=new Date();
+  ge('bot-time').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+}
+updateClock();
+setInterval(updateClock,10000);
+
+// BOT TOGGLE
+function applyBotState(){
+  var dot=ge('bot-dot'),lbl=ge('bot-label'),kill=ge('kill-btn'),tog=ge('big-toggle'),badge=ge('s-badge'),stat=ge('s-status'),sub=ge('s-sub');
+  if(botOn){
+    dot.style.background='var(--green)';dot.style.animation='blink 1.8s infinite';
+    lbl.style.color='var(--green)';lbl.textContent=t('botactive');
+    kill.textContent=t('kill');kill.style.background='rgba(255,77,106,.08)';kill.style.borderColor='rgba(255,77,106,.2)';kill.style.color='var(--red)';
+    if(badge){badge.className='badge b-green';badge.textContent=t('aktiv');}
+    if(tog){tog.className='toggle-circle tc-on';tog.textContent=t('boton');}
+    if(stat)stat.textContent=t('botrunning');
+    if(sub)sub.textContent='Seit 4h 32min';
+  }else{
+    dot.style.background='var(--red)';dot.style.animation='none';
+    lbl.style.color='var(--red)';lbl.textContent=t('botstopped');
+    kill.textContent=t('startbot');kill.style.background='rgba(0,214,143,.08)';kill.style.borderColor='rgba(0,214,143,.2)';kill.style.color='var(--green)';
+    if(badge){badge.className='badge b-red';badge.textContent=t('botstopped');}
+    if(tog){tog.className='toggle-circle tc-off';tog.textContent=t('botoff');}
+    if(stat)stat.textContent=t('botstopped');
+    if(sub)sub.textContent=t('botstopped2');
+  }
+}
+ge('kill-btn').addEventListener('click',function(){botOn=!botOn;applyBotState();});
+ge('big-toggle').addEventListener('click',function(){botOn=!botOn;applyBotState();});
+
+// LANGUAGE
+function setLang(l){
+  lang=l;
+  ge('btn-de').classList.toggle('on',l==='de');
+  ge('btn-en').classList.toggle('on',l==='en');
+  var i=parseInt(currentPage.replace('p',''));
+  ge('pg-title').textContent=t('p'+i);
+  ge('pg-meta').textContent=t('m'+i);
+  applyBotState();
+  renderMarkets(currentMktFilter);
+  renderTrades(currentTradeFilter);
+}
+ge('btn-de').addEventListener('click',function(){setLang('de');});
+ge('btn-en').addEventListener('click',function(){setLang('en');});
+
+// NOTIFICATIONS
+ge('notif-bell').addEventListener('click',function(e){
+  e.stopPropagation();
+  ge('notif-drop').classList.toggle('open');
+});
+document.addEventListener('click',function(e){
+  var w=ge('notif-wrap');
+  if(w&&!w.contains(e.target))ge('notif-drop').classList.remove('open');
+});
+ge('nt-clear').addEventListener('click',function(){
+  ge('notif-list').innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:var(--muted)">Keine Benachrichtigungen</div>';
+  ge('notif-count').style.display='none';
+});
+
+// MOBILE SIDEBAR
+ge('hamburger').addEventListener('click',function(){ge('sidebar').classList.add('open');ge('overlay').classList.add('open');});
+ge('overlay').addEventListener('click',closeSidebar);
+function closeSidebar(){ge('sidebar').classList.remove('open');ge('overlay').classList.remove('open');}
+
+// KELLY
+function setKelly(pct,el){
+  document.querySelectorAll('.kelly-opt').forEach(function(x){x.classList.remove('on');});
+  el.classList.add('on');
+  ge('kelly-pct').textContent=pct;
+}
+
+// PNL CHART
+(function(){
+  var data=[120,-40,210,180,-80,310,90,250,-30,190,280,150,340,87];
+  var maxV=Math.max.apply(null,data.map(Math.abs));
+  var chart=ge('pnl-bars'),days=ge('pnl-days');
+  if(!chart)return;
+  data.forEach(function(v,i){
+    var b=document.createElement('div');
+    b.className='bar '+(v>=0?'bar-g':'bar-r');
+    b.style.height=Math.max(4,Math.round(Math.abs(v)/maxV*82))+'px';
+    chart.appendChild(b);
+    var d=document.createElement('div');
+    d.className='bar-day';d.textContent='T-'+(data.length-i);
+    days.appendChild(d);
+  });
+})();
+
+// PERF CHART
+(function(){
+  var vals=[200,480,310,720,550,900,1100,800,1300,1600,1200,1900,2400,3100,4120];
+  var mx=Math.max.apply(null,vals);
+  var months=['Jan','Feb','Mrz','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez','Jan','Feb','Mrz'];
+  var chart=ge('perf-chart'),days=ge('perf-days');
+  if(!chart)return;
+  vals.forEach(function(v,i){
+    var b=document.createElement('div');b.className='perf-bar';
+    b.style.height=Math.max(4,Math.round(v/mx*122))+'px';
+    chart.appendChild(b);
+    var d=document.createElement('div');d.className='bar-day';d.textContent=months[i];
+    days.appendChild(d);
+  });
+})();
+
+// MARKETS TABLE
+var currentMktFilter='all';
+function renderMarkets(filter){
+  currentMktFilter=filter;
+  var body=ge('mkt-body');
+  if(!body)return;
+  body.innerHTML='';
+  MARKETS.forEach(function(m){
+    if(filter==='kalshi'&&m.plat!=='Kalshi')return;
+    if(filter==='poly'&&m.plat!=='Polymarket')return;
+    if(filter==='edge5'&&parseFloat(m.edge)<5)return;
+    var tr=document.createElement('tr');
+    var pnlColor=m.aiPos?'var(--green)':'var(--muted)';
+    var edgeColor=m.aiPos?'var(--blue)':'var(--muted)';
+    tr.innerHTML='<td style="font-weight:500">'+m.name+'</td>'
+      +'<td><span class="badge '+m.pc+'">'+m.plat+'</span></td>'
+      +'<td style="font-family:JetBrains Mono,monospace">'+m.mkt+'</td>'
+      +'<td style="font-family:JetBrains Mono,monospace;color:'+pnlColor+'">'+m.ai+'</td>'
+      +'<td><div style="display:flex;align-items:center;gap:6px"><div class="edge-wrap"><div class="edge-fill" style="width:'+m.ePct+'%;background:'+edgeColor+'"></div></div><span style="font-size:10px;color:'+edgeColor+';font-family:JetBrains Mono,monospace">'+m.edge+'</span></div></td>'
+      +'<td style="font-family:JetBrains Mono,monospace;color:var(--muted)">'+m.vol+'</td>'
+      +'<td style="color:var(--muted);font-size:11px">'+m.exp+'</td>'
+      +'<td><div class="badge '+m.sc+'">'+m.status+'</div></td>';
+    body.appendChild(tr);
+  });
+}
+function filterMkts(f,btn){
+  ge('p3').querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  renderMarkets(f);
+}
+function doScan(btn){
+  btn.textContent=t('scanning');btn.style.opacity='0.6';
+  setTimeout(function(){btn.textContent=t('scannow');btn.style.opacity='1';},2000);
+}
+
+// TRADES TABLE
+var currentTradeFilter='all';
+function renderTrades(filter){
+  currentTradeFilter=filter;
+  var body=ge('hist-body');
+  if(!body)return;
+  body.innerHTML='';
+  TRADES.forEach(function(tr){
+    if(filter==='won'&&!tr.won)return;
+    if(filter==='lost'&&tr.won)return;
+    if(filter==='kalshi'&&tr.plat!=='Kalshi')return;
+    if(filter==='poly'&&tr.plat!=='Polymarket')return;
+    var row=document.createElement('tr');
+    var pnl=tr.won?'+€'+tr.pnl.replace('+',''):'-€'+tr.pnl.replace('-','');
+    row.innerHTML='<td style="color:var(--muted);font-size:11px;font-family:JetBrains Mono,monospace">'+tr.date+'</td>'
+      +'<td style="font-weight:500">'+tr.name+'</td>'
+      +'<td><span class="badge '+tr.pc+'">'+tr.plat+'</span></td>'
+      +'<td><div class="side '+(tr.side==='JA'?'s-yes':'s-no')+'">'+tr.side+'</div></td>'
+      +'<td style="font-family:JetBrains Mono,monospace">€'+tr.stake+'</td>'
+      +'<td style="font-family:JetBrains Mono,monospace;color:var(--blue)">'+tr.fc+'</td>'
+      +'<td><div class="badge '+(tr.won?'b-green':'b-red')+'">'+(tr.won?t('wonb'):t('lostb'))+'</div></td>'
+      +'<td style="font-family:JetBrains Mono,monospace;color:'+(tr.won?'var(--green)':'var(--red)')+';font-weight:500">'+pnl+'</td>';
+    body.appendChild(row);
+  });
+}
+function filterTrades(f,btn){
+  ge('p4').querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+  renderTrades(f);
+}
+
+// SAVE BUTTON
+function saveBtnClick(btn,orig,saved){
+  btn.textContent=saved;btn.style.background='var(--green)';
+  setTimeout(function(){btn.textContent=orig;btn.style.background='';},2000);
+}
+
+// API KEY TOGGLE
+function toggleKey(btn){
+  var inp=btn.parentElement.querySelector('.key-input');
+  if(inp.type==='password'){inp.type='text';btn.textContent=t('hide');}
+  else{inp.type='password';btn.textContent=t('show');}
+}
+
+// KALSHI MODE SWITCH
+function switchMode(btn){
+  btn.parentElement.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+}
+
+// TEAM
+function removeTeam(btn){
+  var item=btn.closest('.team-item');
+  item.style.opacity='0';item.style.transition='opacity .3s';
+  setTimeout(function(){item.remove();updateTeamCount();},300);
+}
+function updateTeamCount(){
+  var c=ge('team-list').querySelectorAll('.team-item').length;
+  ge('team-count').textContent=c+(lang==='de'?' aktiv':' active');
+}
+function setRole(role){
+  selectedRole=role;
+  ge('r-admin').classList.toggle('on',role==='admin');
+  ge('r-viewer').classList.toggle('on',role==='viewer');
+}
+function sendInvite(){
+  var email=ge('invite-email').value.trim();
+  if(!email)return;
+  var initials=email.substring(0,2).toUpperCase();
+  var colors=['#e74c3c','#3498db','#9b59b6','#f39c12','#1abc9c'];
+  var color=colors[Math.floor(Math.random()*colors.length)];
+  var div=document.createElement('div');
+  div.className='team-item';
+  div.innerHTML='<div class="team-ava" style="background:'+color+'">'+initials+'</div>'
+    +'<div style="flex:1"><div style="font-size:13px;font-weight:500">'+email+'</div>'
+    +'<div style="font-size:11px;color:var(--muted)">'+t('invpending')+'</div></div>'
+    +'<div class="'+(selectedRole==='admin'?'r-admin':'r-viewer')+'">'+(selectedRole==='admin'?'Admin':'Viewer')+'</
