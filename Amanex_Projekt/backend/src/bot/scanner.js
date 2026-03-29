@@ -1,196 +1,126 @@
-const kalshi = require('../api/kalshi');
-const polymarket = require('../api/polymarket');
-const config = require('../config');
+const binance = require('../api/binance');
+const kraken = require('../api/kraken');
+const yahooFinance = require('../api/yahoofinance');
+const coingecko = require('../api/coingecko');
 const logger = require('../utils/logger');
 
-// ── SCANNER
-// Scannt alle Maerkte auf Kalshi und Polymarket
-// Filtert nach Liquiditaet, Volumen und Ablaufzeit
-// Gibt eine sortierte Liste der besten Chancen zurueck
+const STOCKS_WATCHLIST = [
+  'AAPL','MSFT','GOOGL','AMZN','NVDA',
+  'TSLA','META','JPM','SAP','ASML',
+  'NFLX','AMD','INTC','BA','V',
+];
 
 const scanner = {
   async run() {
-    logger.info('Scanner gestartet');
+    logger.info('Scanner gestartet (Binance + Kraken + Aktien)');
     const startTime = Date.now();
-
     try {
-      // Beide Plattformen parallel scannen
-      const [kalshiMarkets, polyMarkets] = await Promise.allSettled([
-        this.scanKalshi(),
-        this.scanPolymarket(),
+      const [binanceResult, krakenResult, stocksResult, fearGreedResult] = await Promise.allSettled([
+        this.scanBinance(),
+        this.scanKraken(),
+        this.scanStocks(),
+        coingecko.getFearGreedIndex(),
       ]);
+      const binanceMarkets = binanceResult.status === 'fulfilled' ? binanceResult.value : [];
+      const krakenMarkets  = krakenResult.status  === 'fulfilled' ? krakenResult.value  : [];
+      const stockMarkets   = stocksResult.status  === 'fulfilled' ? stocksResult.value  : [];
+      const fearGreed      = fearGreedResult.status === 'fulfilled' ? fearGreedResult.value : { score: 0, label: 'Neutral', value: 50 };
 
-      const kalshiResults = kalshiMarkets.status === 'fulfilled' ? kalshiMarkets.value : [];
-      const polyResults   = polyMarkets.status === 'fulfilled'   ? polyMarkets.value : [];
+      const adjustedCrypto = [...binanceMarkets, ...krakenMarkets].map(m => ({
+        ...m,
+        edgeScore: m.edgeScore + (m.signal === 'BUY' ? fearGreed.score * 0.1 : -fearGreed.score * 0.1),
+        fearGreed: fearGreed.value,
+      }));
 
-      // Alle Maerkte zusammenfuehren
-      const allMarkets = [...kalshiResults, ...polyResults];
-
-      // Nach Edge-Score sortieren (beste zuerst)
-      allMarkets.sort((a, b) => b.edgeScore - a.edgeScore);
-
-      // Top 20 zurueckgeben
-      const topMarkets = allMarkets.slice(0, 20);
+      const allMarkets = [...adjustedCrypto, ...stockMarkets]
+        .sort((a, b) => b.edgeScore - a.edgeScore)
+        .slice(0, 25);
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       logger.info('Scanner abgeschlossen', {
-        kalshi: kalshiResults.length,
-        polymarket: polyResults.length,
-        top: topMarkets.length,
+        binance: binanceMarkets.length,
+        kraken: krakenMarkets.length,
+        stocks: stockMarkets.length,
+        fearGreed: fearGreed.label,
         duration: duration + 's',
       });
-
-      return topMarkets;
-    } catch (error) {
+      return allMarkets;
+    } catch(error) {
       logger.error('Scanner Fehler', { message: error.message });
       return [];
     }
   },
 
-  // ── KALSHI SCANNER
-  async scanKalshi() {
+  async scanBinance() {
+    const WATCHLIST = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT','DOGEUSDT','AVAXUSDT','DOTUSDT','MATICUSDT','LINKUSDT','UNIUSDT','ATOMUSDT','LTCUSDT','ETCUSDT'];
     const results = [];
-    let cursor = null;
-    let page = 0;
-    const maxPages = 5; // Max. 500 Maerkte scannen
-
-    while (page < maxPages) {
-      const { markets, cursor: nextCursor } = await kalshi.getMarkets({
-        limit: 100,
-        cursor,
-        status: 'open',
-      });
-
-      if (!markets || markets.length === 0) break;
-
-      for (const market of markets) {
-        const filtered = await this.filterKalshiMarket(market);
-        if (filtered) results.push(filtered);
-      }
-
-      if (!nextCursor) break;
-      cursor = nextCursor;
-      page++;
+    for(const symbol of WATCHLIST) {
+      try {
+        const [stats, klines] = await Promise.all([binance.get24hStats(symbol), binance.getKlines(symbol,'1h',50)]);
+        if(!stats || !klines.length) continue;
+        const price = parseFloat(stats.lastPrice);
+        const change24h = parseFloat(stats.priceChangePercent);
+        const volume24h = parseFloat(stats.quoteVolume);
+        if(volume24h < 10000000) continue;
+        const volatility = binance.calculateVolatility(klines);
+        const rsi = binance.calculateRSI(klines);
+        let edgeScore = 0, signal = 'HOLD';
+        if(rsi < 35) { edgeScore = (35-rsi)/35; signal = 'BUY'; }
+        else if(rsi > 65) { edgeScore = (rsi-65)/35; signal = 'SELL'; }
+        edgeScore += Math.min(volume24h/1000000000, 0.2);
+        if(volatility > 0.02) edgeScore *= 1.2;
+        results.push({ id:symbol, platform:'binance', type:'crypto', title:symbol.replace('USDT','')+'/USDT', price, change24h:Math.round(change24h*100)/100, volume:Math.round(volume24h), rsi:Math.round(rsi), edgeScore:Math.round(Math.max(0,edgeScore)*100)/100, signal, yesPrice:rsi/100 });
+      } catch(e) { logger.warn('Binance scan Fehler', {symbol, message:e.message}); }
     }
-
-    logger.info('Kalshi gescannt', { total: results.length });
+    logger.info('Binance gescannt', {count:results.length});
     return results;
   },
 
-  async filterKalshiMarket(market) {
-    try {
-      // Grundfilter
-      if (market.status !== 'open') return null;
-
-      // Volumen pruefen
-      const volume = market.volume || 0;
-      if (volume < config.MIN_VOLUME) return null;
-
-      // Ablaufzeit pruefen
-      const daysToExpiry = this.getDaysToExpiry(market.close_time);
-      if (daysToExpiry > config.MAX_EXPIRY_DAYS || daysToExpiry < 0) return null;
-
-      // Aktueller Preis (Yes-Preis in Prozent)
-      const yesPrice = (market.yes_bid + market.yes_ask) / 2 / 100; // Cents -> Dezimal
-      if (yesPrice <= 0 || yesPrice >= 1) return null;
-
-      // Spread pruefen (max. 5 Cent)
-      const spread = (market.yes_ask - market.yes_bid) / 100;
-      if (spread > 0.05) return null;
-
-      // Edge-Score berechnen (fuer Sortierung - echter Edge kommt vom Prediction-Modul)
-      const liquidityScore  = Math.min(volume / 10000, 1);
-      const timeScore       = 1 - (daysToExpiry / config.MAX_EXPIRY_DAYS);
-      const spreadScore     = 1 - (spread / 0.05);
-      const edgeScore       = (liquidityScore * 0.4) + (timeScore * 0.3) + (spreadScore * 0.3);
-
-      return {
-        id:           market.ticker_name,
-        platform:     'kalshi',
-        title:        market.title || market.ticker_name,
-        yesPrice:     Math.round(yesPrice * 100) / 100,
-        volume:       Math.round(volume),
-        daysToExpiry: Math.round(daysToExpiry),
-        spread:       Math.round(spread * 100) / 100,
-        edgeScore:    Math.round(edgeScore * 100) / 100,
-        raw:          market,
-      };
-    } catch (error) {
-      return null;
-    }
-  },
-
-  // ── POLYMARKET SCANNER
-  async scanPolymarket() {
+  async scanKraken() {
+    const EUR_PAIRS = [
+      {pair:'XBTEUR',title:'BTC/EUR'},{pair:'ETHEUR',title:'ETH/EUR'},
+      {pair:'SOLEUR',title:'SOL/EUR'},{pair:'ADAEUR',title:'ADA/EUR'},
+      {pair:'XRPEUR',title:'XRP/EUR'},{pair:'DOTEUR',title:'DOT/EUR'},
+    ];
     const results = [];
-    const markets = await polymarket.getMarkets({ limit: 100, active: true });
-
-    for (const market of markets) {
-      const filtered = this.filterPolymarket(market);
-      if (filtered) results.push(filtered);
+    for(const {pair,title} of EUR_PAIRS) {
+      try {
+        const [ticker, ohlcv] = await Promise.all([kraken.getTicker(pair), kraken.getOHLCV(pair, 60)]);
+        if(!ticker || !ohlcv.length || ticker.volume < 10) continue;
+        const rsi = kraken.calculateRSI(ohlcv);
+        let edgeScore = 0, signal = 'HOLD';
+        if(rsi < 35) { edgeScore = (35-rsi)/35; signal = 'BUY'; }
+        else if(rsi > 65) { edgeScore = (rsi-65)/35; signal = 'SELL'; }
+        results.push({ id:pair, platform:'kraken', type:'crypto', title, price:ticker.price, change24h:Math.round(ticker.change*100)/100, volume:Math.round(ticker.volume), rsi:Math.round(rsi), edgeScore:Math.round(Math.max(0,edgeScore)*100)/100, signal, yesPrice:rsi/100, currency:'EUR' });
+      } catch(e) { logger.warn('Kraken scan Fehler', {pair, message:e.message}); }
     }
-
-    logger.info('Polymarket gescannt', { total: results.length });
+    logger.info('Kraken gescannt', {count:results.length});
     return results;
   },
 
-  filterPolymarket(market) {
+  async scanStocks() {
     try {
-      // Nur aktive, nicht archivierte Maerkte
-      if (!market.active || market.archived || market.closed) return null;
-
-      // Volumen pruefen
-      const volume = polymarket.getVolume(market);
-      if (volume < config.MIN_VOLUME) return null;
-
-      // Ablaufzeit pruefen
-      const daysToExpiry = polymarket.getDaysToExpiry(market);
-      if (daysToExpiry > config.MAX_EXPIRY_DAYS || daysToExpiry < 0) return null;
-
-      // Preis aus outcomes extrahieren
-      const outcomes = market.outcomes || [];
-      if (outcomes.length < 2) return null;
-
-      const yesPriceStr = market.outcomePrices?.[0] || '0.5';
-      const yesPrice    = parseFloat(yesPriceStr);
-      if (yesPrice <= 0 || yesPrice >= 1) return null;
-
-      // Edge-Score
-      const liquidityScore  = Math.min(volume / 10000, 1);
-      const timeScore       = 1 - (daysToExpiry / config.MAX_EXPIRY_DAYS);
-      const edgeScore       = (liquidityScore * 0.5) + (timeScore * 0.5);
-
-      return {
-        id:           market.conditionId || market.id,
-        platform:     'polymarket',
-        title:        market.question || market.title,
-        yesPrice:     Math.round(yesPrice * 100) / 100,
-        volume:       Math.round(volume),
-        daysToExpiry: Math.round(daysToExpiry),
-        spread:       0.02, // Polymarket hat typischerweise enge Spreads
-        edgeScore:    Math.round(edgeScore * 100) / 100,
-        tokenId:      market.tokens?.[0]?.token_id,
-        raw:          market,
-      };
-    } catch (error) {
-      return null;
+      const quotes = await yahooFinance.getQuotes(STOCKS_WATCHLIST);
+      const results = await Promise.all(quotes.map(async (quote) => {
+        try {
+          const [history, news] = await Promise.all([yahooFinance.getHistory(quote.symbol,'1mo','1d'), yahooFinance.getNews(quote.symbol)]);
+          const rsi = yahooFinance.calculateRSI(history);
+          let edgeScore = 0, signal = 'ANALYSE';
+          if(rsi < 35) { edgeScore = (35-rsi)/35; signal = 'BUY'; }
+          else if(rsi > 65) { edgeScore = (rsi-65)/35; signal = 'SELL'; }
+          const posNews = news.filter(n => /beat|surge|record|growth|profit|strong/i.test(n.title)).length;
+          const negNews = news.filter(n => /miss|fall|drop|loss|weak|cut/i.test(n.title)).length;
+          edgeScore += ((posNews - negNews) / (news.length || 1)) * 0.1;
+          return { id:quote.symbol, platform:'stocks', type:'stock', title:quote.name+' ('+quote.symbol+')', price:quote.price, change24h:Math.round((quote.changePct||0)*100)/100, volume:quote.volume, rsi:Math.round(rsi), pe:quote.pe, edgeScore:Math.round(Math.max(0,edgeScore)*100)/100, signal, yesPrice:rsi/100, note:'Manuell via Trade Republic / Scalable Capital' };
+        } catch(e) { return null; }
+      }));
+      const valid = results.filter(Boolean);
+      logger.info('Aktien gescannt', {count:valid.length});
+      return valid;
+    } catch(error) {
+      logger.error('Aktien scan Fehler', {message:error.message});
+      return [];
     }
-  },
-
-  // ── HILFSFUNKTIONEN
-  getDaysToExpiry(closeTimeStr) {
-    if (!closeTimeStr) return 999;
-    const closeTime = new Date(closeTimeStr);
-    const now       = new Date();
-    return (closeTime - now) / (1000 * 60 * 60 * 24);
-  },
-
-  // Preisbewegung pruefen (Anomalie-Erkennung)
-  isPriceAnomaly(currentPrice, historicalPrices = []) {
-    if (historicalPrices.length < 3) return false;
-    const avg = historicalPrices.reduce((a, b) => a + b, 0) / historicalPrices.length;
-    const change = Math.abs(currentPrice - avg) / avg;
-    return change > 0.10; // Mehr als 10% Abweichung vom Durchschnitt
   },
 };
 
