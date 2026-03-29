@@ -1,26 +1,25 @@
 {
-  "name": "amanex-backend",
-  "version": "1.0.0",
-  "description": "Amanex Trading Bot Backend",
-  "main": "src/server.js",
-  "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "scheduler": "node src/scheduler.js"
-  },
+  "name": "amanex-frontend",
+  "version": "2.0.0",
+  "private": true,
   "dependencies": {
-    "express": "^4.18.2",
-    "axios": "^1.6.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "node-cron": "^3.0.3",
-    "@supabase/supabase-js": "^2.39.0",
-    "stripe": "^14.0.0",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "winston": "^3.11.0"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1"
   },
-  "devDependencies": {
-    "nodemon": "^3.0.2"
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version"
+    ]
   }
 }
