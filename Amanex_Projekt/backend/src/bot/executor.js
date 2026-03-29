@@ -1,192 +1,126 @@
-const kalshi = require('../api/kalshi');
-const polymarket = require('../api/polymarket');
+const binance = require('../api/binance');
+const kraken = require('../api/kraken');
 const db = require('../utils/db');
 const logger = require('../utils/logger');
-
-// ── EXECUTOR MODUL
-// Fuehrt Trades auf Kalshi und Polymarket aus
-// Prueft Slippage vor Ausfuehrung
-// Protokolliert jeden Trade in der Datenbank
 
 const executor = {
   async run(markets) {
     logger.info('Executor gestartet', { markets: markets.length });
-
     const results = [];
     for (const market of markets) {
       if (!market.riskApproved) continue;
-
       try {
-        const result = await this.executeTrade(market);
+        let result;
+        if (market.platform === 'binance') result = await this.executeBinance(market);
+        else if (market.platform === 'kraken') result = await this.executeKraken(market);
+        else if (market.type === 'stock') result = await this.createStockRecommendation(market);
         if (result) results.push(result);
       } catch (error) {
-        logger.error('Trade-Ausfuehrung Fehler', {
-          market: market.id,
-          message: error.message,
-        });
+        logger.error('Trade Fehler', { market: market.id, message: error.message });
       }
     }
-
     logger.info('Executor abgeschlossen', { executed: results.length });
     return results;
   },
 
-  async executeTrade(market) {
-    const { id, platform, title, yesPrice, consensus, signal, positionSize } = market;
-
-    // Handelsseite bestimmen
-    const side = signal === 'BUY_YES' ? 'yes' : 'no';
-    const executionPrice = side === 'yes' ? yesPrice : 1 - yesPrice;
-
-    logger.info('Trade wird ausgefuehrt', {
-      market: title.substring(0, 50),
-      platform,
-      side,
-      price: executionPrice,
-      amount: Math.round(positionSize),
-    });
-
+  async executeBinance(market) {
+    const { id, signal, positionSize, price } = market;
+    if (signal !== 'BUY' && signal !== 'SELL') return null;
+    const side = signal === 'BUY' ? 'BUY' : 'SELL';
+    const quantity = positionSize / price;
     try {
-      // Slippage-Check: Aktuellen Preis kurz vor Ausfuehrung pruefen
-      const slippageOk = await this.checkSlippage(market, executionPrice);
-      if (!slippageOk) {
-        logger.warn('Trade abgebrochen: Zu viel Slippage', { market: id });
-        return null;
+      const currentPrice = await binance.getPrice(id);
+      if (currentPrice) {
+        const slippage = Math.abs(currentPrice - price) / price;
+        if (slippage > 0.02) {
+          logger.warn('Binance Slippage zu gross', { expected: price, current: currentPrice });
+          return null;
+        }
       }
-
-      // Anzahl Contracts berechnen
-      // Kalshi: 1 Contract = 1 USD Gewinn
-      const contracts = Math.floor(positionSize / executionPrice);
-      if (contracts < 1) {
-        logger.warn('Trade abgebrochen: Zu wenig Contracts', { contracts });
-        return null;
-      }
-
-      let order = null;
-
-      // Trade platzieren
-      if (platform === 'kalshi') {
-        order = await kalshi.placeOrder({
-          tickerId: id,
-          side,
-          count: contracts,
-          yesPrice: executionPrice,
-        });
-      } else if (platform === 'polymarket') {
-        order = await polymarket.placeOrder({
-          tokenId: market.tokenId,
-          side,
-          amount: positionSize,
-          price: executionPrice,
-        });
-      }
-
-      if (!order) {
-        logger.error('Order wurde nicht bestaetigt', { market: id });
-        return null;
-      }
-
-      // Trade in DB speichern
+      const order = await binance.placeMarketOrder({ symbol: id, side, quantity });
       const trade = await db.saveTrade({
-        market_id:      id,
-        platform,
-        market_title:   title,
-        side,
-        amount:         positionSize,
-        contracts,
-        entry_price:    executionPrice,
-        ai_consensus:   consensus,
-        edge_pct:       market.edge,
-        status:         'open',
-        order_id:       order.order_id || order.id,
-        created_at:     new Date().toISOString(),
+        market_id: id, platform: 'binance', market_title: market.title,
+        side: side === 'BUY' ? 'yes' : 'no', amount: positionSize, contracts: 1,
+        entry_price: currentPrice || price, ai_consensus: market.consensus,
+        edge_pct: market.edge, status: 'open',
+        order_id: order?.orderId?.toString(), created_at: new Date().toISOString(),
       });
-
-      logger.info('Trade erfolgreich ausgefuehrt', {
-        tradeId:   trade.id,
-        market:    title.substring(0, 40),
-        side,
-        contracts,
-        amount:    Math.round(positionSize),
-        price:     executionPrice,
-      });
-
+      logger.info('Binance Trade erfolgreich', { tradeId: trade.id, symbol: id, side });
       return trade;
     } catch (error) {
-      logger.error('Trade fehlgeschlagen', {
-        market: id,
-        platform,
-        message: error.message,
-      });
-
-      // Fehlgeschlagenen Trade protokollieren
-      await db.saveTrade({
-        market_id:    id,
-        platform,
-        market_title: title,
-        side,
-        amount:       positionSize,
-        entry_price:  executionPrice,
-        status:       'failed',
-        error_msg:    error.message,
-        created_at:   new Date().toISOString(),
-      }).catch(() => {}); // Fehler beim Logging ignorieren
-
+      logger.error('Binance Trade fehlgeschlagen', { symbol: id, message: error.message });
       return null;
     }
   },
 
-  // Slippage-Check: Preis hat sich nicht mehr als 2% bewegt
-  async checkSlippage(market, expectedPrice) {
+  async executeKraken(market) {
+    const { id, signal, positionSize, price } = market;
+    if (signal !== 'BUY' && signal !== 'SELL') return null;
+    const type = signal === 'BUY' ? 'buy' : 'sell';
+    const volume = positionSize / price;
     try {
-      let currentPrice = null;
-
-      if (market.platform === 'kalshi') {
-        const orderbook = await kalshi.getOrderbook(market.id);
-        if (orderbook) {
-          currentPrice = ((orderbook.yes_bid + orderbook.yes_ask) / 2) / 100;
-        }
-      } else if (market.platform === 'polymarket' && market.tokenId) {
-        currentPrice = await polymarket.getPrice(market.tokenId);
-      }
-
-      if (!currentPrice) return true; // Wenn kein Preis: Trade erlauben
-
-      const slippage = Math.abs(currentPrice - expectedPrice) / expectedPrice;
+      const ticker = await kraken.getTicker(id);
+      const currentPrice = ticker?.price || price;
+      const slippage = Math.abs(currentPrice - price) / price;
       if (slippage > 0.02) {
-        logger.warn('Slippage zu gross', {
-          expected: expectedPrice,
-          current: currentPrice,
-          slippage: Math.round(slippage * 100) + '%',
-        });
-        return false;
+        logger.warn('Kraken Slippage zu gross', { expected: price, current: currentPrice });
+        return null;
       }
-
-      return true;
+      await kraken.placeOrder({ pair: id, type, volume });
+      const trade = await db.saveTrade({
+        market_id: id, platform: 'kraken', market_title: market.title,
+        side: type === 'buy' ? 'yes' : 'no', amount: positionSize, contracts: 1,
+        entry_price: currentPrice, ai_consensus: market.consensus,
+        edge_pct: market.edge, status: 'open', created_at: new Date().toISOString(),
+      });
+      logger.info('Kraken Trade erfolgreich', { tradeId: trade.id, pair: id, type });
+      return trade;
     } catch (error) {
-      // Bei Fehler: Trade erlauben
-      return true;
+      logger.error('Kraken Trade fehlgeschlagen', { pair: id, message: error.message });
+      return null;
     }
   },
 
-  // Offenen Trade schliessen (bei Positionsaenderung)
+  async createStockRecommendation(market) {
+    logger.info('Aktien-Empfehlung erstellt', { symbol: market.id, signal: market.signal });
+    try {
+      const trade = await db.saveTrade({
+        market_id: market.id, platform: 'stocks',
+        market_title: market.title + ' [MANUELL]',
+        side: market.signal === 'BUY' ? 'yes' : 'no',
+        amount: market.positionSize, contracts: 1,
+        entry_price: market.price || 0, ai_consensus: market.consensus,
+        edge_pct: market.edge, status: 'recommendation',
+        created_at: new Date().toISOString(),
+      });
+      logger.info('Aktien-Empfehlung gespeichert', {
+        symbol: market.id, action: market.signal, amount: Math.round(market.positionSize),
+        platform: 'Trade Republic / Scalable Capital',
+      });
+      return trade;
+    } catch (error) {
+      logger.error('Aktien-Empfehlung Fehler', { symbol: market.id, message: error.message });
+      return null;
+    }
+  },
+
   async closeTrade(trade, currentPrice) {
     try {
-      const pnl = (currentPrice - trade.entry_price) *
-        (trade.side === 'yes' ? 1 : -1) * trade.contracts;
-
+      if (trade.platform === 'binance') {
+        const side = trade.side === 'yes' ? 'SELL' : 'BUY';
+        const quantity = trade.amount / trade.entry_price;
+        await binance.placeMarketOrder({ symbol: trade.market_id, side, quantity });
+      } else if (trade.platform === 'kraken') {
+        const type = trade.side === 'yes' ? 'sell' : 'buy';
+        const volume = trade.amount / trade.entry_price;
+        await kraken.placeOrder({ pair: trade.market_id, type, volume });
+      }
+      const pnl = (currentPrice - trade.entry_price) * (trade.side === 'yes' ? 1 : -1) * (trade.amount / trade.entry_price);
       await db.updateTrade(trade.id, {
-        exit_price: currentPrice,
-        pnl:        Math.round(pnl * 100) / 100,
-        status:     'closed',
-        closed_at:  new Date().toISOString(),
+        exit_price: currentPrice, pnl: Math.round(pnl * 100) / 100,
+        status: 'closed', closed_at: new Date().toISOString(),
       });
-
-      logger.info('Trade geschlossen', {
-        tradeId: trade.id,
-        pnl:     Math.round(pnl),
-      });
-
+      logger.info('Trade geschlossen', { tradeId: trade.id, pnl: Math.round(pnl) });
       return pnl;
     } catch (error) {
       logger.error('Trade schliessen Fehler', { tradeId: trade.id, message: error.message });
