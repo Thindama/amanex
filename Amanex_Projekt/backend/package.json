@@ -18,5 +18,6 @@
     "@anthropic-ai/sdk": "latest",
     "@nktkas/hyperliquid": "latest",
     "viem": "latest"
+    "winston": "^3.11.0",
   }
 }
