@@ -1,7 +1,10 @@
 const binance = require('../api/binance');
 const kraken = require('../api/kraken');
+const hyperliquid = require('../api/hyperliquid');
 const yahooFinance = require('../api/yahoofinance');
 const coingecko = require('../api/coingecko');
+const indicators = require('../indicators/localIndicators');
+const { RiskManager } = require('../risk/riskManager');
 const logger = require('../utils/logger');
 
 const STOCKS_WATCHLIST = [
@@ -10,23 +13,32 @@ const STOCKS_WATCHLIST = [
   'NFLX','AMD','INTC','BA','V',
 ];
 
+const HL_ASSETS = (process.env.HYPERLIQUID_ASSETS || 'BTC ETH SOL').split(/\s+/).filter(Boolean);
+const HL_INTERVAL = process.env.HYPERLIQUID_INTERVAL || '5m';
+
+// Globale Risk-Manager-Instanz fuer Force-Close-Monitoring
+const riskManager = new RiskManager();
+
 const scanner = {
   async run() {
-    logger.info('Scanner gestartet (Binance + Kraken + Aktien)');
+    logger.info('Scanner gestartet (Binance + Kraken + Hyperliquid + Aktien)');
     const startTime = Date.now();
     try {
-      const [binanceResult, krakenResult, stocksResult, fearGreedResult] = await Promise.allSettled([
+      const [binanceResult, krakenResult, hyperliquidResult, stocksResult, fearGreedResult] = await Promise.allSettled([
         this.scanBinance(),
         this.scanKraken(),
+        this.scanHyperliquid(),
         this.scanStocks(),
         coingecko.getFearGreedIndex(),
       ]);
-      const binanceMarkets = binanceResult.status === 'fulfilled' ? binanceResult.value : [];
-      const krakenMarkets  = krakenResult.status  === 'fulfilled' ? krakenResult.value  : [];
-      const stockMarkets   = stocksResult.status  === 'fulfilled' ? stocksResult.value  : [];
-      const fearGreed      = fearGreedResult.status === 'fulfilled' ? fearGreedResult.value : { score: 0, label: 'Neutral', value: 50 };
+      const binanceMarkets     = binanceResult.status     === 'fulfilled' ? binanceResult.value     : [];
+      const krakenMarkets      = krakenResult.status      === 'fulfilled' ? krakenResult.value      : [];
+      const hyperliquidMarkets = hyperliquidResult.status === 'fulfilled' ? hyperliquidResult.value : [];
+      const stockMarkets       = stocksResult.status      === 'fulfilled' ? stocksResult.value      : [];
+      const fearGreed          = fearGreedResult.status   === 'fulfilled' ? fearGreedResult.value   : { score: 0, label: 'Neutral', value: 50 };
 
-      const adjustedCrypto = [...binanceMarkets, ...krakenMarkets].map(m => ({
+      // Fear/Greed-Adjustment gilt fuer alle Crypto-Schienen (Spot + Perps)
+      const adjustedCrypto = [...binanceMarkets, ...krakenMarkets, ...hyperliquidMarkets].map(m => ({
         ...m,
         edgeScore: m.edgeScore + (m.signal === 'BUY' ? fearGreed.score * 0.1 : -fearGreed.score * 0.1),
         fearGreed: fearGreed.value,
@@ -36,10 +48,20 @@ const scanner = {
         .sort((a, b) => b.edgeScore - a.edgeScore)
         .slice(0, 25);
 
+      // Post-scan: Force-Close Check fuer Hyperliquid-Positionen
+      // (Binance/Kraken haben den Check im bestehenden Executor-Pfad)
+      try {
+        const hlPositions = await hyperliquid.getOpenPositions();
+        await riskManager.forceCloseIfNeeded(hlPositions, (asset) => hyperliquid.closePosition(asset));
+      } catch (err) {
+        logger.warn('Hyperliquid force-close check failed', { message: err.message });
+      }
+
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       logger.info('Scanner abgeschlossen', {
         binance: binanceMarkets.length,
         kraken: krakenMarkets.length,
+        hyperliquid: hyperliquidMarkets.length,
         stocks: stockMarkets.length,
         fearGreed: fearGreed.label,
         duration: duration + 's',
@@ -95,6 +117,75 @@ const scanner = {
       } catch(e) { logger.warn('Kraken scan Fehler', {pair, message:e.message}); }
     }
     logger.info('Kraken gescannt', {count:results.length});
+    return results;
+  },
+
+  async scanHyperliquid() {
+    if (!HL_ASSETS.length) return [];
+    const results = [];
+    for (const asset of HL_ASSETS) {
+      try {
+        const [klines, klines4h, price, stats] = await Promise.all([
+          hyperliquid.getKlines(asset, HL_INTERVAL, 100),
+          hyperliquid.getKlines(asset, '4h', 50),
+          hyperliquid.getPrice(asset),
+          hyperliquid.get24hStats(asset),
+        ]);
+        if (!klines.length || !price) continue;
+
+        // Lokale Indikatoren (ersetzen die simplen binance-Helpers)
+        const ind = indicators.computeAll(klines);
+        const ind4h = indicators.computeAll(klines4h);
+        const rsiVal = indicators.last(ind.rsi14) ?? 50;
+        const atrVal = indicators.last(ind.atr14) ?? 0;
+        const macdHist = indicators.last(ind.macd.histogram) ?? 0;
+
+        let edgeScore = 0;
+        let signal = 'HOLD';
+        if (rsiVal < 35) { edgeScore = (35 - rsiVal) / 35; signal = 'BUY'; }
+        else if (rsiVal > 65) { edgeScore = (rsiVal - 65) / 35; signal = 'SELL'; }
+
+        // MACD-Histogram-Boost (bestaetigt die RSI-Direktion)
+        if (signal === 'BUY' && macdHist > 0) edgeScore *= 1.15;
+        if (signal === 'SELL' && macdHist < 0) edgeScore *= 1.15;
+
+        // Volumen-Boost wie bei Binance
+        const volume24h = stats?.quoteVolume || 0;
+        edgeScore += Math.min(volume24h / 1e9, 0.2);
+
+        const volatility = hyperliquid.calculateVolatility(klines);
+        if (volatility > 0.02) edgeScore *= 1.2;
+
+        const isHip3 = hyperliquid.isHip3(asset);
+        const title = isHip3 ? asset.split(':')[1] : asset + '-PERP';
+
+        results.push({
+          id: asset,
+          platform: 'hyperliquid',
+          type: isHip3 ? 'tradfi-perp' : 'crypto-perp',
+          title,
+          price,
+          change24h: stats ? Math.round(stats.priceChangePercent * 100) / 100 : 0,
+          volume: Math.round(volume24h),
+          rsi: Math.round(rsiVal),
+          atr: Math.round(atrVal * 100) / 100,
+          funding: stats?.funding ?? 0,
+          openInterest: stats?.openInterest ?? 0,
+          edgeScore: Math.round(Math.max(0, edgeScore) * 100) / 100,
+          signal,
+          yesPrice: rsiVal / 100,
+          // Ephemere Felder (underscore) fuer downstream AI-Konsens & Executor.
+          // Werden NICHT in der DB persistiert.
+          _candles: klines,
+          _candles4h: klines4h,
+          _indicators: ind,
+          _indicators4h: ind4h,
+        });
+      } catch (e) {
+        logger.warn('Hyperliquid scan Fehler', { asset, message: e.message });
+      }
+    }
+    logger.info('Hyperliquid gescannt', { count: results.length });
     return results;
   },
 
