@@ -13,6 +13,8 @@
     "dotenv": "^16.0.3",
     "axios": "^1.6.0",
     "node-cron": "^3.0.3",
+    "jsonwebtoken": "^9.0.0",
+    "bcryptjs": "^2.4.3",
     "@anthropic-ai/sdk": "latest",
     "@nktkas/hyperliquid": "latest",
     "viem": "latest"
