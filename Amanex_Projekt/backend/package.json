@@ -15,9 +15,9 @@
     "node-cron": "^3.0.3",
     "jsonwebtoken": "^9.0.0",
     "bcryptjs": "^2.4.3",
+    "winston": "^3.11.0",
     "@anthropic-ai/sdk": "latest",
     "@nktkas/hyperliquid": "latest",
     "viem": "latest"
-    "winston": "^3.11.0",
   }
 }
