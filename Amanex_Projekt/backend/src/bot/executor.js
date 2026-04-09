@@ -1,4 +1,3 @@
-const binance = require('../api/binance');
 const kraken = require('../api/kraken');
 const hyperliquid = require('../api/hyperliquid');
 const { RiskManager } = require('../risk/riskManager');
@@ -6,7 +5,7 @@ const db = require('../utils/db');
 const logger = require('../utils/logger');
 
 // Globaler RiskManager — eine Instanz fuer alle Exchanges.
-// Phase-1-Rollout: nur Hyperliquid laeuft durch das Gate. Fuer Binance/Kraken
+// Phase-1-Rollout: nur Hyperliquid laeuft durch das Gate. Fuer Kraken
 // wird der bestehende market.riskApproved-Pfad beibehalten, damit sich an der
 // aktuellen Signalqualitaet nichts aendert. Sobald die erweiterten Signale
 // validiert sind, kann das Gate per RISK_GATE_ALL=1 fuer alle Plattformen
@@ -43,8 +42,7 @@ const executor = {
         }
 
         let result;
-        if (executableMarket.platform === 'binance') result = await this.executeBinance(executableMarket);
-        else if (executableMarket.platform === 'kraken') result = await this.executeKraken(executableMarket);
+        if (executableMarket.platform === 'kraken') result = await this.executeKraken(executableMarket);
         else if (executableMarket.platform === 'hyperliquid') result = await this.executeHyperliquid(executableMarket);
         else if (executableMarket.type === 'stock' || executableMarket.type?.startsWith('stock')) result = await this.createStockRecommendation(executableMarket);
         if (result) results.push(result);
@@ -87,16 +85,6 @@ const executor = {
           currentPrice,
         };
       }
-      if (platform === 'binance') {
-        const [balance, currentPrice] = await Promise.all([
-          binance.getUSDTBalance(),
-          binance.getPrice(market.id),
-        ]);
-        return {
-          balance, equity: balance, initialBalance: balance,
-          openPositions: [], currentPrice,
-        };
-      }
       if (platform === 'kraken') {
         const ticker = await kraken.getTicker(market.id);
         return {
@@ -108,36 +96,6 @@ const executor = {
       logger.warn('getStateFor failed', { platform, message: err.message });
     }
     return { balance: 0, equity: 0, initialBalance: 0, openPositions: [], currentPrice: market.price };
-  },
-
-  async executeBinance(market) {
-    const { id, signal, positionSize, price } = market;
-    if (signal !== 'BUY' && signal !== 'SELL') return null;
-    const side = signal === 'BUY' ? 'BUY' : 'SELL';
-    const quantity = positionSize / price;
-    try {
-      const currentPrice = await binance.getPrice(id);
-      if (currentPrice) {
-        const slippage = Math.abs(currentPrice - price) / price;
-        if (slippage > 0.02) {
-          logger.warn('Binance Slippage zu gross', { expected: price, current: currentPrice });
-          return null;
-        }
-      }
-      const order = await binance.placeMarketOrder({ symbol: id, side, quantity });
-      const trade = await db.saveTrade({
-        market_id: id, platform: 'binance', market_title: market.title,
-        side: side === 'BUY' ? 'yes' : 'no', amount: positionSize, contracts: 1,
-        entry_price: currentPrice || price, ai_consensus: market.consensus,
-        edge_pct: market.edge, status: 'open',
-        order_id: order?.orderId?.toString(), created_at: new Date().toISOString(),
-      });
-      logger.info('Binance Trade erfolgreich', { tradeId: trade.id, symbol: id, side });
-      return trade;
-    } catch (error) {
-      logger.error('Binance Trade fehlgeschlagen', { symbol: id, message: error.message });
-      return null;
-    }
   },
 
   async executeKraken(market) {
@@ -254,11 +212,7 @@ const executor = {
 
   async closeTrade(trade, currentPrice) {
     try {
-      if (trade.platform === 'binance') {
-        const side = trade.side === 'yes' ? 'SELL' : 'BUY';
-        const quantity = trade.amount / trade.entry_price;
-        await binance.placeMarketOrder({ symbol: trade.market_id, side, quantity });
-      } else if (trade.platform === 'kraken') {
+      if (trade.platform === 'kraken') {
         const type = trade.side === 'yes' ? 'sell' : 'buy';
         const volume = trade.amount / trade.entry_price;
         await kraken.placeOrder({ pair: trade.market_id, type, volume });

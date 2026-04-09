@@ -1,0 +1,5 @@
+
+# Build artifacts
+Amanex_Projekt/backend/node_modules/
+Amanex_Projekt/backend/package-lock.json
+logs/

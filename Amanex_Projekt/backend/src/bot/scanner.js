@@ -1,4 +1,3 @@
-const binance = require('../api/binance');
 const kraken = require('../api/kraken');
 const hyperliquid = require('../api/hyperliquid');
 const yahooFinance = require('../api/yahoofinance');
@@ -22,24 +21,22 @@ const riskManager = new RiskManager();
 
 const scanner = {
   async run() {
-    logger.info('Scanner gestartet (Binance + Kraken + Hyperliquid + Aktien)');
+    logger.info('Scanner gestartet (Kraken + Hyperliquid + Aktien)');
     const startTime = Date.now();
     try {
-      const [binanceResult, krakenResult, hyperliquidResult, stocksResult, fearGreedResult] = await Promise.allSettled([
-        this.scanBinance(),
+      const [krakenResult, hyperliquidResult, stocksResult, fearGreedResult] = await Promise.allSettled([
         this.scanKraken(),
         this.scanHyperliquid(),
         this.scanStocks(),
         coingecko.getFearGreedIndex(),
       ]);
-      const binanceMarkets     = binanceResult.status     === 'fulfilled' ? binanceResult.value     : [];
       const krakenMarkets      = krakenResult.status      === 'fulfilled' ? krakenResult.value      : [];
       const hyperliquidMarkets = hyperliquidResult.status === 'fulfilled' ? hyperliquidResult.value : [];
       const stockMarkets       = stocksResult.status      === 'fulfilled' ? stocksResult.value      : [];
       const fearGreed          = fearGreedResult.status   === 'fulfilled' ? fearGreedResult.value   : { score: 0, label: 'Neutral', value: 50 };
 
       // Fear/Greed-Adjustment gilt fuer alle Crypto-Schienen (Spot + Perps)
-      const adjustedCrypto = [...binanceMarkets, ...krakenMarkets, ...hyperliquidMarkets].map(m => ({
+      const adjustedCrypto = [...krakenMarkets, ...hyperliquidMarkets].map(m => ({
         ...m,
         edgeScore: m.edgeScore + (m.signal === 'BUY' ? fearGreed.score * 0.1 : -fearGreed.score * 0.1),
         fearGreed: fearGreed.value,
@@ -58,7 +55,7 @@ const scanner = {
       }
 
       // Post-scan: Force-Close Check fuer Hyperliquid-Positionen
-      // (Binance/Kraken haben den Check im bestehenden Executor-Pfad)
+      // (Kraken hat den Check im bestehenden Executor-Pfad)
       try {
         const hlPositions = await hyperliquid.getOpenPositions();
         await riskManager.forceCloseIfNeeded(hlPositions, (asset) => hyperliquid.closePosition(asset));
@@ -68,7 +65,6 @@ const scanner = {
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       logger.info('Scanner abgeschlossen', {
-        binance: binanceMarkets.length,
         kraken: krakenMarkets.length,
         hyperliquid: hyperliquidMarkets.length,
         stocks: stockMarkets.length,
@@ -80,37 +76,6 @@ const scanner = {
       logger.error('Scanner Fehler', { message: error.message });
       return [];
     }
-  },
-
-  async scanBinance() {
-    if (binance.isDisabled && binance.isDisabled()) {
-      logger.info('Binance scanner uebersprungen (geoblocked)');
-      return [];
-    }
-    const WATCHLIST = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT','DOGEUSDT','AVAXUSDT','DOTUSDT','MATICUSDT','LINKUSDT','UNIUSDT','ATOMUSDT','LTCUSDT','ETCUSDT'];
-    const results = [];
-    for(const symbol of WATCHLIST) {
-      // Geoblock-Early-Exit: wenn wir bei einem Symbol 451 bekommen, bricht binance.js ab.
-      if (binance.isDisabled && binance.isDisabled()) break;
-      try {
-        const [stats, klines] = await Promise.all([binance.get24hStats(symbol), binance.getKlines(symbol,'1h',50)]);
-        if(!stats || !klines.length) continue;
-        const price = parseFloat(stats.lastPrice);
-        const change24h = parseFloat(stats.priceChangePercent);
-        const volume24h = parseFloat(stats.quoteVolume);
-        if(volume24h < 10000000) continue;
-        const volatility = binance.calculateVolatility(klines);
-        const rsi = binance.calculateRSI(klines);
-        let edgeScore = 0, signal = 'HOLD';
-        if(rsi < 35) { edgeScore = (35-rsi)/35; signal = 'BUY'; }
-        else if(rsi > 65) { edgeScore = (rsi-65)/35; signal = 'SELL'; }
-        edgeScore += Math.min(volume24h/1000000000, 0.2);
-        if(volatility > 0.02) edgeScore *= 1.2;
-        results.push({ id:symbol, platform:'binance', type:'crypto', title:symbol.replace('USDT','')+'/USDT', price, change24h:Math.round(change24h*100)/100, volume:Math.round(volume24h), rsi:Math.round(rsi), edgeScore:Math.round(Math.max(0,edgeScore)*100)/100, signal, yesPrice:rsi/100 });
-      } catch(e) { logger.warn('Binance scan Fehler', {symbol, message:e.message}); }
-    }
-    logger.info('Binance gescannt', {count:results.length});
-    return results;
   },
 
   async scanKraken() {
