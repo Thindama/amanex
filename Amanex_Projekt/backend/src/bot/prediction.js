@@ -310,7 +310,9 @@ Keine Erklaerung, nur die Zahl. Beispiel: 67`;
     const probability = Math.round((weightedSum / totalWeight) * 100) / 100;
 
     // Konfidenz: Wie viele Modelle haben geantwortet?
-    const confidence = modelCount >= 4 ? 'high' : modelCount >= 3 ? 'medium' : 'low';
+    // Schwelle auf >=2 gesenkt, weil mehrere Provider aktuell quota/billing-
+    // Probleme haben. RiskManager lehnt weiterhin alles unter "medium" ab.
+    const confidence = modelCount >= 4 ? 'high' : modelCount >= 2 ? 'medium' : 'low';
 
     return { probability, confidence, modelCount };
   },

@@ -61,7 +61,7 @@ const riskManager = {
 
       // 5. Konfidenz-Check
       if (market.confidence === 'low') {
-        return this.reject('KI-Konfidenz zu niedrig (weniger als 3 Modelle)');
+        return this.reject('KI-Konfidenz zu niedrig (weniger als 2 Modelle)');
       }
 
       // 6. Positionsgroesse berechnen (Kelly)
