@@ -64,8 +64,17 @@ const prediction = {
       const consensus = this.calculateConsensus(predictions);
       if (!consensus) return null;
 
-      // Edge berechnen
-      const edge = Math.round((consensus.probability - market.yesPrice) * 100 * 10) / 10;
+      // Edge berechnen.
+      // - Prediction-Markets (Kalshi/Polymarket) haben ein echtes yesPrice:
+      //   edge = KI-Wahrscheinlichkeit - Marktpreis
+      // - Spot/Perp/Stock haben keinen yesPrice; der Scanner setzt dort
+      //   yesPrice = rsi/100 als Platzhalter. Fuer diese Instrumente ist
+      //   edge = Abweichung des KI-Wertes vom neutralen 50% — also wie
+      //   stark die KI ueber/unter 50 liegt. Das ergibt ein direktes
+      //   BUY/SELL-Signal ohne prediction-market-Mechanik.
+      const isPredictionMarket = ['kalshi', 'polymarket'].includes(market.platform);
+      const baseline = isPredictionMarket ? market.yesPrice : 0.5;
+      const edge = Math.round((consensus.probability - baseline) * 100 * 10) / 10;
 
       // In DB speichern
       await db.savePrediction({
@@ -80,11 +89,26 @@ const prediction = {
 
       logger.info('Prediction berechnet', {
         market: market.title.substring(0, 50),
-        marketPrice:  market.yesPrice,
+        marketPrice:  baseline,
         aiEstimate:   consensus.probability,
         edge:         edge + '%',
         confidence:   consensus.confidence,
       });
+
+      // Signal-Format ist instrument-abhaengig. Der Executor normalisiert
+      // beides spaeter nochmal, aber hier setzen wir direkt das passende:
+      // - Prediction-Markets: BUY_YES / BUY_NO (historisch)
+      // - Spot/Perp/Stock:    BUY / SELL
+      let signal;
+      if (isPredictionMarket) {
+        signal = edge >= config.MIN_EDGE_PCT ? 'BUY_YES'
+               : edge <= -config.MIN_EDGE_PCT ? 'BUY_NO'
+               : 'HOLD';
+      } else {
+        signal = edge >= config.MIN_EDGE_PCT ? 'BUY'
+               : edge <= -config.MIN_EDGE_PCT ? 'SELL'
+               : 'HOLD';
+      }
 
       return {
         ...market,
@@ -92,9 +116,7 @@ const prediction = {
         consensus: consensus.probability,
         confidence: consensus.confidence,
         edge,
-        // Handelsempfehlung
-        signal: edge >= config.MIN_EDGE_PCT ? 'BUY_YES' :
-                edge <= -config.MIN_EDGE_PCT ? 'BUY_NO' : 'HOLD',
+        signal,
       };
     } catch (error) {
       logger.error('Prediction Fehler', { market: market.id, message: error.message });
@@ -204,7 +226,10 @@ const prediction = {
       ?.map(s => `[${s.source.toUpperCase()}] ${s.text}`)
       .join('\n') || 'Keine Research-Daten verfuegbar';
 
-    return `Du bist ein Prediction-Market-Analyst. Schaetze die Wahrscheinlichkeit fuer folgendes Ereignis.
+    const isPredictionMarket = ['kalshi', 'polymarket'].includes(market.platform);
+
+    if (isPredictionMarket) {
+      return `Du bist ein Prediction-Market-Analyst. Schaetze die Wahrscheinlichkeit fuer folgendes Ereignis.
 
 MARKT: ${market.title}
 AKTUELLER MARKTPREIS: ${Math.round(market.yesPrice * 100)}% (JA-Wahrscheinlichkeit)
@@ -213,6 +238,29 @@ ${researchSummary}
 SENTIMENT-SCORE: ${market.sentiment || 0} (von -1 bearish bis +1 bullish)
 
 Antworte NUR mit einer Zahl zwischen 0 und 100 (= deine geschaetzte JA-Wahrscheinlichkeit in Prozent).
+Keine Erklaerung, nur die Zahl. Beispiel: 67`;
+    }
+
+    // Spot / Perp / Stock — direkte Richtungs-Einschaetzung.
+    // 50 = neutral, 100 = starker LONG, 0 = starker SHORT.
+    const instrumentLabel = market.type?.includes('perp') ? 'Perpetual Future'
+      : market.type === 'stock' ? 'Aktie'
+      : 'Krypto Spot';
+    return `Du bist ein quantitativer Trader. Gib eine LONG-Wahrscheinlichkeit fuer den naechsten 1-4 Stunden-Horizont.
+
+INSTRUMENT: ${market.title} (${instrumentLabel} auf ${market.platform})
+AKTUELLER PREIS: ${market.price}
+24h-CHANGE: ${market.change24h ?? 'n/a'}%
+RSI(14): ${market.rsi ?? 'n/a'}
+${market.funding != null ? `FUNDING-RATE: ${market.funding}\n` : ''}${market.openInterest ? `OPEN INTEREST: ${market.openInterest}\n` : ''}SCANNER-SIGNAL: ${market.signal || 'HOLD'}
+AKTUELLE NACHRICHTEN:
+${researchSummary}
+SENTIMENT-SCORE: ${market.sentiment || 0} (von -1 bearish bis +1 bullish)
+
+Antworte NUR mit einer Zahl zwischen 0 und 100:
+- 100 = sehr starke LONG-Ueberzeugung
+- 50  = neutral / HOLD
+- 0   = sehr starke SHORT-Ueberzeugung
 Keine Erklaerung, nur die Zahl. Beispiel: 67`;
   },
 

@@ -23,6 +23,27 @@ module.exports = {
   KALSHI_ENV: process.env.KALSHI_ENV || 'demo',
   POLYMARKET_PRIVATE_KEY: process.env.POLYMARKET_PRIVATE_KEY,
 
+  // Kraken (EUR-Spot)
+  KRAKEN_API_KEY: process.env.KRAKEN_API_KEY,
+  KRAKEN_API_SECRET: process.env.KRAKEN_API_SECRET,
+
+  // Hyperliquid (Perps + HIP-3) — Agent-Wallet-Pattern.
+  // PRIVATE_KEY ist der Agent-Signer, VAULT_ADDRESS ist die Main-Wallet.
+  // Ohne PRIVATE_KEY initialisiert der Client gar nicht und der Scanner
+  // ueberspringt die Hyperliquid-Schiene geraeuschlos.
+  HYPERLIQUID_PRIVATE_KEY:  process.env.HYPERLIQUID_PRIVATE_KEY,
+  HYPERLIQUID_VAULT_ADDRESS: process.env.HYPERLIQUID_VAULT_ADDRESS,
+  HYPERLIQUID_NETWORK:      process.env.HYPERLIQUID_NETWORK || 'mainnet',
+  HYPERLIQUID_ASSETS:       process.env.HYPERLIQUID_ASSETS || 'BTC ETH SOL',
+  HYPERLIQUID_INTERVAL:     process.env.HYPERLIQUID_INTERVAL || '5m',
+
+  // Claude-Enriched Signalkanal (optional override)
+  CLAUDE_MODEL_HYPERLIQUID: process.env.CLAUDE_MODEL_HYPERLIQUID || 'claude-sonnet-4-6',
+
+  // Phase-1-Rollout: globaler RiskManager greift nur fuer Hyperliquid.
+  // RISK_GATE_ALL=1 schaltet das Gate auch fuer Kraken scharf, sobald validiert.
+  RISK_GATE_ALL: process.env.RISK_GATE_ALL === '1',
+
   // Datenquellen
   TWITTER_BEARER_TOKEN: process.env.TWITTER_BEARER_TOKEN,
   REDDIT_CLIENT_ID: process.env.REDDIT_CLIENT_ID,

@@ -4,6 +4,7 @@ const yahooFinance = require('../api/yahoofinance');
 const coingecko = require('../api/coingecko');
 const indicators = require('../indicators/localIndicators');
 const { RiskManager } = require('../risk/riskManager');
+const config = require('../config');
 const db = require('../utils/db');
 const logger = require('../utils/logger');
 
@@ -13,8 +14,13 @@ const STOCKS_WATCHLIST = [
   'NFLX','AMD','INTC','BA','V',
 ];
 
-const HL_ASSETS = (process.env.HYPERLIQUID_ASSETS || 'BTC ETH SOL').split(/\s+/).filter(Boolean);
-const HL_INTERVAL = process.env.HYPERLIQUID_INTERVAL || '5m';
+const HL_ASSETS = (config.HYPERLIQUID_ASSETS || 'BTC ETH SOL').split(/\s+/).filter(Boolean);
+const HL_INTERVAL = config.HYPERLIQUID_INTERVAL || '5m';
+// Hyperliquid-Scanner laeuft nur, wenn der Agent-Signer konfiguriert ist.
+// Ohne Private-Key gaebe es bei jedem Asset einen Request-Fehler und der
+// Force-Close-Check unten wuerde ebenfalls aus Ermangelung an Positionen
+// sinnlos durchlaufen.
+const HL_ENABLED = !!config.HYPERLIQUID_PRIVATE_KEY;
 
 // Globale Risk-Manager-Instanz fuer Force-Close-Monitoring
 const riskManager = new RiskManager();
@@ -55,12 +61,16 @@ const scanner = {
       }
 
       // Post-scan: Force-Close Check fuer Hyperliquid-Positionen
-      // (Kraken hat den Check im bestehenden Executor-Pfad)
-      try {
-        const hlPositions = await hyperliquid.getOpenPositions();
-        await riskManager.forceCloseIfNeeded(hlPositions, (asset) => hyperliquid.closePosition(asset));
-      } catch (err) {
-        logger.warn('Hyperliquid force-close check failed', { message: err.message });
+      // (Kraken hat den Check im bestehenden Executor-Pfad).
+      // Nur ausfuehren wenn Hyperliquid ueberhaupt konfiguriert ist, sonst
+      // logt der Adapter bei jedem Scan unnoetig "client not initialized".
+      if (HL_ENABLED) {
+        try {
+          const hlPositions = await hyperliquid.getOpenPositions();
+          await riskManager.forceCloseIfNeeded(hlPositions, (asset) => hyperliquid.closePosition(asset));
+        } catch (err) {
+          logger.warn('Hyperliquid force-close check failed', { message: err.message });
+        }
       }
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -101,6 +111,7 @@ const scanner = {
   },
 
   async scanHyperliquid() {
+    if (!HL_ENABLED) return [];
     if (!HL_ASSETS.length) return [];
     const results = [];
     for (const asset of HL_ASSETS) {

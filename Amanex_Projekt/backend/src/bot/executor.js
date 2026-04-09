@@ -1,6 +1,7 @@
 const kraken = require('../api/kraken');
 const hyperliquid = require('../api/hyperliquid');
 const { RiskManager } = require('../risk/riskManager');
+const config = require('../config');
 const db = require('../utils/db');
 const logger = require('../utils/logger');
 
@@ -11,14 +12,31 @@ const logger = require('../utils/logger');
 // validiert sind, kann das Gate per RISK_GATE_ALL=1 fuer alle Plattformen
 // scharf geschaltet werden.
 const risk = new RiskManager();
-const RISK_GATE_ALL = process.env.RISK_GATE_ALL === '1';
+const RISK_GATE_ALL = config.RISK_GATE_ALL;
+
+// prediction.js vergibt historisch BUY_YES / BUY_NO (Prediction-Market-Erbe).
+// Der scanner vergibt BUY / SELL / HOLD. Die Trade-Branches unten erwarten
+// strikt BUY / SELL. Damit beide Pfade funktionieren, wird das Signal hier
+// einmalig normalisiert — ohne andere Felder anzufassen.
+function normalizeSignal(raw) {
+  const s = String(raw || '').toUpperCase();
+  if (s === 'BUY' || s === 'BUY_YES' || s === 'KAUF' || s === 'LONG') return 'BUY';
+  if (s === 'SELL' || s === 'BUY_NO' || s === 'VERK' || s === 'SHORT') return 'SELL';
+  return 'HOLD';
+}
 
 const executor = {
   async run(markets) {
     logger.info('Executor gestartet', { markets: markets.length });
     const results = [];
-    for (const market of markets) {
-      // Gate 1 — bestehende Backend-Risk-Approval (Binance/Kraken/Stocks)
+    for (const rawMarket of markets) {
+      // Signal normalisieren (BUY_YES/BUY_NO → BUY/SELL) bevor irgendetwas
+      // am Market geprueft wird — damit Kraken- und Hyperliquid-Branches
+      // beide mit dem gleichen Format arbeiten.
+      const market = { ...rawMarket, signal: normalizeSignal(rawMarket.signal) };
+      if (market.signal === 'HOLD') continue;
+
+      // Gate 1 — bestehende Backend-Risk-Approval (Kraken/Stocks).
       // Fuer Hyperliquid ist das Feld in der Regel nicht gesetzt, also
       // springen wir direkt auf das lokale Gate.
       if (market.platform !== 'hyperliquid' && !RISK_GATE_ALL && !market.riskApproved) continue;
@@ -77,10 +95,29 @@ const executor = {
           hyperliquid.getOpenPositions(),
           hyperliquid.getPrice(market.id),
         ]);
+        // Initial-Balance fuer den Reserve-Check aus bot_settings lesen.
+        // Beim ersten Start (noch nicht gesetzt) wird der aktuelle Wert
+        // als Baseline hinterlegt, damit die 20%-Reserve nicht dauerhaft
+        // blockiert. Wir nehmen bewusst den aktuellen Account-Value — im
+        // Testnet/Mainnet-Rollout soll der erste Scan als "Tag 0" gelten.
+        let initialBalance = value;
+        try {
+          const settings = await db.getBotSettings();
+          const stored = parseFloat(settings.hl_initial_balance);
+          if (Number.isFinite(stored) && stored > 0) {
+            initialBalance = stored;
+          } else if (value > 0) {
+            await db.supabase
+              .from('bot_settings')
+              .upsert({ key: 'hl_initial_balance', value: String(value), updated_at: new Date().toISOString() });
+          }
+        } catch (err) {
+          logger.warn('hl_initial_balance read failed', { message: err.message });
+        }
         return {
           balance: value,
           equity: value,
-          initialBalance: value, // TODO: aus DB lesen fuer echte Reserve-Checks
+          initialBalance,
           openPositions: positions,
           currentPrice,
         };
