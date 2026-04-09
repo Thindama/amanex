@@ -52,6 +52,7 @@ const executor = {
           const check = await risk.check(intent, state);
           if (!check.approved) {
             logger.info('Risk reject', { market: market.id, reason: check.reason });
+            notifier.tradeRejected(market.id, check.reason || 'risk gate');
             continue;
           }
           executableMarket = { ...market, ...check.adjustedIntent };
@@ -265,7 +266,7 @@ const executor = {
     }
   },
 
-  async closeTrade(trade, currentPrice) {
+  async closeTrade(trade, currentPrice, closeReason = 'manual') {
     try {
       if (trade.platform === 'kraken') {
         const type = trade.side === 'yes' ? 'sell' : 'buy';
@@ -275,14 +276,23 @@ const executor = {
         await hyperliquid.closePosition(trade.market_id);
       }
       const pnl = (currentPrice - trade.entry_price) * (trade.side === 'yes' ? 1 : -1) * (trade.amount / trade.entry_price);
+      const pnlRounded = Math.round(pnl * 100) / 100;
       await db.updateTrade(trade.id, {
-        exit_price: currentPrice, pnl: Math.round(pnl * 100) / 100,
+        exit_price: currentPrice, pnl: pnlRounded,
         status: 'closed', closed_at: new Date().toISOString(),
+        close_reason: closeReason,
       });
-      logger.info('Trade geschlossen', { tradeId: trade.id, pnl: Math.round(pnl) });
+      logger.info('Trade geschlossen', { tradeId: trade.id, pnl: Math.round(pnl), reason: closeReason });
+      notifier.tradeClosed({
+        market: trade.market_id,
+        pair: trade.pair || trade.market_id,
+        pnl: pnlRounded,
+        close_reason: closeReason,
+      });
       return pnl;
     } catch (error) {
       logger.error('Trade schliessen Fehler', { tradeId: trade.id, message: error.message });
+      notifier.error('closeTrade', `${trade.market_id}: ${error.message}`);
       return 0;
     }
   },

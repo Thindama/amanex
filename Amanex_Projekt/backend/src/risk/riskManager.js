@@ -16,6 +16,7 @@
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
+const notifier = require('../utils/notifier');
 
 // ── DEFAULTS ──────────────────────────────────────────────────────────────
 
@@ -285,6 +286,11 @@ class RiskManager {
           logger.warn('Force-close triggered', { asset: pos.asset, pnlPct: pnlPct.toFixed(2) });
           await closePositionFn(pos.asset);
           closed.push({ asset: pos.asset, pnlPct });
+          notifier.tradeClosed({
+            market: pos.asset,
+            pnl: pos.pnl || 0,
+            close_reason: `force-close ${pnlPct.toFixed(2)}% <= -${this.config.MAX_LOSS_PER_POSITION_PCT}%`,
+          });
         } catch (err) {
           logger.error('Force-close failed', { asset: pos.asset, message: err.message });
         }

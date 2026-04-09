@@ -8,6 +8,8 @@ const prediction = require('./bot/prediction');
 const riskManager = require('./bot/riskManager');
 const executor   = require('./bot/executor');
 const learner    = require('./bot/learner');
+const notifier   = require('./utils/notifier');
+const db         = require('./utils/db');
 
 // ── SCHEDULER
 // Startet die komplette Bot-Pipeline alle 15 Minuten (konfigurierbar)
@@ -97,6 +99,26 @@ async function runPipeline() {
   }
 }
 
+// ── DAILY REPORT (einmal taeglich, 23:55 Europe/Berlin)
+// Schickt Tages-PnL + aktiven Kill-Switch-Status an Telegram. No-op wenn
+// der Notifier nicht konfiguriert ist. Fehler werden nur geloggt, damit
+// der Cron nie haengen bleibt.
+async function runDailyReport() {
+  try {
+    const dailyPnl = await db.getDailyPnL();
+    const ks = riskManager.isKillSwitchActive() ? ' 🛑 KILL-SWITCH AKTIV' : '';
+    const sign = dailyPnl >= 0 ? '+' : '';
+    await notifier.send(
+      `📊 <b>Daily Report</b>\n` +
+      `PnL heute: ${sign}${Number(dailyPnl).toFixed(2)} USDC${ks}\n` +
+      `Letzter Run: ${lastRunTime || '-'}`
+    );
+    logger.info('Daily report gesendet', { dailyPnl });
+  } catch (err) {
+    logger.error('Daily report Fehler', { message: err.message });
+  }
+}
+
 // ── LERN-PIPELINE (einmal taeglich)
 async function runLearner() {
   logger.info('Lern-Pipeline gestartet');
@@ -125,6 +147,12 @@ function startScheduler() {
 
   // Lern-Pipeline: taeglich um 03:00 Uhr
   cron.schedule('0 3 * * *', runLearner, {
+    scheduled: true,
+    timezone: 'Europe/Berlin',
+  });
+
+  // Daily Report: taeglich um 23:55 Uhr
+  cron.schedule('55 23 * * *', runDailyReport, {
     scheduled: true,
     timezone: 'Europe/Berlin',
   });

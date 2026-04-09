@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "dev": "nodemon src/server.js",
+    "backtest": "node src/backtest/backtest.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
