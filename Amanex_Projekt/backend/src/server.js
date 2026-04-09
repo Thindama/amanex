@@ -112,10 +112,12 @@ app.post('/api/bot/scan', auth, async (req, res) => {
 
 app.get('/api/dashboard/metrics', auth, async (req, res) => {
   try {
-    const [balance, settings, openTrades] = await Promise.all([
+    const [balance, settings, openTrades, latestMarkets, lastScanTime] = await Promise.all([
       db.getAccountBalance(),
       db.getBotSettings(),
       db.getOpenTrades(),
+      db.getLatestMarkets(5),
+      db.getLastScanTime(),
     ]);
     const dailyPnl = await db.getDailyPnL();
     res.json({
@@ -129,6 +131,19 @@ app.get('/api/dashboard/metrics', auth, async (req, res) => {
       sharpeRatio: parseFloat(settings.sharpe_ratio) || 0,
       openPositions: openTrades.length,
       maxPositions: config.MAX_CONCURRENT_TRADES,
+      scannerActive: latestMarkets.length > 0,
+      trackedMarkets: latestMarkets.length,
+      lastScanTime,
+      topMarkets: latestMarkets.map(m => ({
+        id:        m.id,
+        platform:  m.platform,
+        title:     m.title,
+        price:     m.price,
+        change24h: m.change_24h,
+        rsi:       m.rsi,
+        edgeScore: m.edge_score,
+        signal:    m.signal,
+      })),
     });
   } catch (error) {
     logger.error('Metrics Fehler', { message: error.message });
@@ -158,12 +173,25 @@ app.get('/api/trades', auth, async (req, res) => {
 
 app.get('/api/scanner/results', auth, async (req, res) => {
   try {
-    const { data, error } = await db.supabase
-      .from('markets').select('*')
-      .order('edge_score', { ascending: false }).limit(20);
-    if (error) throw error;
-    res.json(data || []);
+    const markets = await db.getLatestMarkets(25);
+    // Normalisiere auf das Format, das das Frontend erwartet
+    // (camelCase Felder statt snake_case).
+    res.json(markets.map(m => ({
+      id:          m.id,
+      platform:    m.platform,
+      title:       m.title,
+      price:       m.price,
+      yesPrice:    m.yes_price,
+      change24h:   m.change_24h,
+      volume:      m.volume,
+      rsi:         m.rsi,
+      edgeScore:   m.edge_score,
+      signal:      m.signal,
+      currency:    m.currency,
+      lastScanned: m.last_scanned,
+    })));
   } catch (error) {
+    logger.error('Scanner-Results Fehler', { message: error.message });
     res.status(500).json({ error: 'Serverfehler' });
   }
 });

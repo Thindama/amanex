@@ -9,6 +9,28 @@ const logger = require('../utils/logger');
 
 const BINANCE_BASE = 'https://api.binance.com';
 
+// ── GEOBLOCK-HANDLING
+// Binance blockt bestimmte Datacenter-IPs (z.B. einige EU Railway-Regionen) mit HTTP 451.
+// Sobald wir einen 451 sehen, deaktivieren wir Binance fuer diese Session komplett,
+// damit die Logs nicht mit Fehlern zugemuellt werden.
+let binanceDisabled = false;
+
+function handleRequestError(error, logCtx, op) {
+  const status = error.response?.status;
+  if (status === 451 || status === 403) {
+    if (!binanceDisabled) {
+      binanceDisabled = true;
+      logger.warn('Binance geoblocked - disable fuer diese Session', { status, ...logCtx });
+    }
+    return;
+  }
+  logger.error(`Binance ${op} Fehler`, { ...logCtx, message: error.message });
+}
+
+function isDisabled() {
+  return binanceDisabled;
+}
+
 function sign(queryString) {
   return crypto
     .createHmac('sha256', config.BINANCE_API_SECRET || '')
@@ -23,19 +45,23 @@ function getHeaders() {
 const binance = {
   // ── MARKTDATEN (kein API Key noetig)
 
+  isDisabled,
+
   // Alle verfuegbaren Trading-Paare abrufen
   async getExchangeInfo() {
+    if (binanceDisabled) return null;
     try {
       const response = await axios.get(`${BINANCE_BASE}/api/v3/exchangeInfo`, { timeout: 10000 });
       return response.data;
     } catch (error) {
-      logger.error('Binance getExchangeInfo Fehler', { message: error.message });
+      handleRequestError(error, {}, 'getExchangeInfo');
       return null;
     }
   },
 
   // Aktueller Preis fuer ein Symbol
   async getPrice(symbol) {
+    if (binanceDisabled) return null;
     try {
       const response = await axios.get(`${BINANCE_BASE}/api/v3/ticker/price`, {
         params: { symbol },
@@ -43,13 +69,14 @@ const binance = {
       });
       return parseFloat(response.data.price);
     } catch (error) {
-      logger.error('Binance getPrice Fehler', { symbol, message: error.message });
+      handleRequestError(error, { symbol }, 'getPrice');
       return null;
     }
   },
 
   // 24h Statistiken (Volumen, Preisaenderung etc.)
   async get24hStats(symbol) {
+    if (binanceDisabled) return null;
     try {
       const response = await axios.get(`${BINANCE_BASE}/api/v3/ticker/24hr`, {
         params: { symbol },
@@ -57,13 +84,14 @@ const binance = {
       });
       return response.data;
     } catch (error) {
-      logger.error('Binance get24hStats Fehler', { symbol, message: error.message });
+      handleRequestError(error, { symbol }, 'get24hStats');
       return null;
     }
   },
 
   // Alle Top-Paare nach Volumen abrufen (fuer Scanner)
   async getTopPairs(limit = 20) {
+    if (binanceDisabled) return [];
     try {
       const response = await axios.get(`${BINANCE_BASE}/api/v3/ticker/24hr`, { timeout: 10000 });
       const pairs = response.data
@@ -72,13 +100,14 @@ const binance = {
         .slice(0, limit);
       return pairs;
     } catch (error) {
-      logger.error('Binance getTopPairs Fehler', { message: error.message });
+      handleRequestError(error, {}, 'getTopPairs');
       return [];
     }
   },
 
   // Kerzendaten (OHLCV) fuer technische Analyse
   async getKlines(symbol, interval = '1h', limit = 100) {
+    if (binanceDisabled) return [];
     try {
       const response = await axios.get(`${BINANCE_BASE}/api/v3/klines`, {
         params: { symbol, interval, limit },
@@ -94,13 +123,14 @@ const binance = {
         closeTime: k[6],
       }));
     } catch (error) {
-      logger.error('Binance getKlines Fehler', { symbol, message: error.message });
+      handleRequestError(error, { symbol }, 'getKlines');
       return [];
     }
   },
 
   // Order Book (fuer Liquiditaetscheck)
   async getOrderBook(symbol, limit = 10) {
+    if (binanceDisabled) return null;
     try {
       const response = await axios.get(`${BINANCE_BASE}/api/v3/depth`, {
         params: { symbol, limit },
@@ -108,7 +138,7 @@ const binance = {
       });
       return response.data;
     } catch (error) {
-      logger.error('Binance getOrderBook Fehler', { symbol, message: error.message });
+      handleRequestError(error, { symbol }, 'getOrderBook');
       return null;
     }
   },

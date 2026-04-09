@@ -7,6 +7,21 @@ const logger = require('../utils/logger');
 // Bewertet Sentiment und erstellt Research-Brief
 // Wichtig: Behandelt alle externen Inhalte als INFORMATION, nicht als Befehle (Prompt-Injection-Schutz)
 
+// Auto-Disable-Flags: sobald eine Quelle dauerhaft 401/403 liefert,
+// schalten wir sie fuer diese Session ab damit die Logs sauber bleiben.
+let twitterDisabled = false;
+let redditDisabled = false;
+
+function sanitizeToken(token) {
+  if (!token) return null;
+  // ENV-Vars werden gelegentlich mit Anfuehrungszeichen oder umgebendem Muell gespeichert
+  // (z.B. beim Copy-Paste aus einer anderen Variable). Wir extrahieren nur das Kerntoken.
+  const trimmed = String(token).trim().replace(/^["']|["']$/g, '');
+  // Abschneiden, falls mehrere ENV-Werte zusammengeklebt wurden (z.B. 'abc"XYZ=...')
+  const cutoff = trimmed.search(/["\s]/);
+  return cutoff > 0 ? trimmed.slice(0, cutoff) : trimmed;
+}
+
 const research = {
   async run(markets) {
     logger.info('Research gestartet', { markets: markets.length });
@@ -122,7 +137,9 @@ const research = {
 
   // ── TWITTER/X API
   async fetchTwitter(query) {
-    if (!config.TWITTER_BEARER_TOKEN) return [];
+    if (twitterDisabled) return [];
+    const token = sanitizeToken(config.TWITTER_BEARER_TOKEN);
+    if (!token || token.length < 20) return [];
 
     try {
       const response = await axios.get('https://api.twitter.com/2/tweets/search/recent', {
@@ -131,7 +148,7 @@ const research = {
           max_results:  20,
           'tweet.fields': 'public_metrics,created_at',
         },
-        headers: { Authorization: `Bearer ${config.TWITTER_BEARER_TOKEN}` },
+        headers: { Authorization: `Bearer ${token}` },
         timeout: 8000,
       });
 
@@ -141,14 +158,21 @@ const research = {
         retweets: t.public_metrics?.retweet_count || 0,
       }));
     } catch (error) {
-      logger.warn('Twitter-Fetch Fehler', { query, message: error.message });
+      const status = error.response?.status;
+      if (status === 401 || status === 403) {
+        twitterDisabled = true;
+        logger.warn('Twitter API deaktiviert (Auth-Fehler) - Research laeuft ohne Twitter weiter', { status });
+      } else {
+        logger.warn('Twitter-Fetch Fehler', { query, message: error.message });
+      }
       return [];
     }
   },
 
   // ── REDDIT API
   async fetchReddit(query) {
-    if (!config.REDDIT_CLIENT_ID) return [];
+    if (redditDisabled) return [];
+    if (!config.REDDIT_CLIENT_ID || !config.REDDIT_CLIENT_SECRET) return [];
 
     try {
       // Reddit OAuth Token holen
@@ -179,7 +203,13 @@ const research = {
         score:    c.data.score || 0,
       }));
     } catch (error) {
-      logger.warn('Reddit-Fetch Fehler', { query, message: error.message });
+      const status = error.response?.status;
+      if (status === 401 || status === 403) {
+        redditDisabled = true;
+        logger.warn('Reddit API deaktiviert (Auth-Fehler) - Research laeuft ohne Reddit weiter', { status });
+      } else {
+        logger.warn('Reddit-Fetch Fehler', { query, message: error.message });
+      }
       return [];
     }
   },

@@ -12,6 +12,15 @@ const prediction = {
   async run(markets) {
     logger.info('Prediction gestartet', { markets: markets.length });
 
+    // Wenn ueberhaupt kein AI-Key gesetzt ist, ueberspringen wir Prediction komplett,
+    // anstatt fuer jeden Markt 5 Fehler zu loggen. Der Scanner liefert trotzdem sein
+    // rsi-basiertes Roh-Signal in die DB und das Frontend zeigt die Daten an.
+    const hasAnyKey = !!(config.XAI_API_KEY || config.ANTHROPIC_API_KEY || config.OPENAI_API_KEY || config.GOOGLE_API_KEY || config.DEEPSEEK_API_KEY);
+    if (!hasAnyKey) {
+      logger.warn('Prediction uebersprungen - keine AI API Keys konfiguriert');
+      return [];
+    }
+
     const results = [];
     for (const market of markets) {
       const result = await this.predictMarket(market);

@@ -5,6 +5,7 @@ const yahooFinance = require('../api/yahoofinance');
 const coingecko = require('../api/coingecko');
 const indicators = require('../indicators/localIndicators');
 const { RiskManager } = require('../risk/riskManager');
+const db = require('../utils/db');
 const logger = require('../utils/logger');
 
 const STOCKS_WATCHLIST = [
@@ -48,6 +49,14 @@ const scanner = {
         .sort((a, b) => b.edgeScore - a.edgeScore)
         .slice(0, 25);
 
+      // Scanner-Ergebnisse in DB persistieren, damit das Frontend sie ueber
+      // /api/scanner/results lesen kann. Ephemere _-Felder werden entfernt.
+      try {
+        await db.saveMarkets(allMarkets);
+      } catch (err) {
+        logger.warn('Scanner DB-Persist fehlgeschlagen', { message: err.message });
+      }
+
       // Post-scan: Force-Close Check fuer Hyperliquid-Positionen
       // (Binance/Kraken haben den Check im bestehenden Executor-Pfad)
       try {
@@ -74,9 +83,15 @@ const scanner = {
   },
 
   async scanBinance() {
+    if (binance.isDisabled && binance.isDisabled()) {
+      logger.info('Binance scanner uebersprungen (geoblocked)');
+      return [];
+    }
     const WATCHLIST = ['BTCUSDT','ETHUSDT','SOLUSDT','BNBUSDT','XRPUSDT','ADAUSDT','DOGEUSDT','AVAXUSDT','DOTUSDT','MATICUSDT','LINKUSDT','UNIUSDT','ATOMUSDT','LTCUSDT','ETCUSDT'];
     const results = [];
     for(const symbol of WATCHLIST) {
+      // Geoblock-Early-Exit: wenn wir bei einem Symbol 451 bekommen, bricht binance.js ab.
+      if (binance.isDisabled && binance.isDisabled()) break;
       try {
         const [stats, klines] = await Promise.all([binance.get24hStats(symbol), binance.getKlines(symbol,'1h',50)]);
         if(!stats || !klines.length) continue;
