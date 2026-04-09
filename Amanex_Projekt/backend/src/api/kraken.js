@@ -28,12 +28,19 @@ const kraken = {
       const result = response.data.result;
       const key = Object.keys(result)[0];
       const data = result[key];
+      const close = parseFloat(data.c[0]);
+      const open = parseFloat(data.o);
+      // Kraken's data.p[1] ist VWAP der letzten 24h, kein Prozent-Change.
+      // Echter 24h-Change = (close - open) / open * 100
+      const changePct = open > 0 ? ((close - open) / open) * 100 : 0;
       return {
-        price:    parseFloat(data.c[0]),
+        price:    close,
         volume:   parseFloat(data.v[1]),
         high:     parseFloat(data.h[1]),
         low:      parseFloat(data.l[1]),
-        change:   parseFloat(data.p[1]),
+        open,
+        vwap24h:  parseFloat(data.p[1]),
+        change:   changePct,
       };
     } catch(error) {
       logger.error('Kraken getTicker Fehler', { pair, message: error.message });
