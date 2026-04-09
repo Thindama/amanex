@@ -138,6 +138,14 @@ const executor = {
   async executeKraken(market) {
     const { id, signal, positionSize, price } = market;
     if (signal !== 'BUY' && signal !== 'SELL') return null;
+    // Gate: Ohne KRAKEN_API_KEY kann keine echte Order platziert werden.
+    // Ohne diesen Gate schreibt saveTrade() Phantom-Trades in die DB, weil
+    // Kraken bei Auth-Fehlern HTTP 200 + {error:[...], result:null} zurueckgibt
+    // und placeOrder() damit keine Exception wirft. History/P&L verfaelscht.
+    if (!config.KRAKEN_API_KEY || !config.KRAKEN_API_SECRET) {
+      logger.info('Kraken Trade uebersprungen - keine API Keys', { pair: id, signal });
+      return null;
+    }
     const type = signal === 'BUY' ? 'buy' : 'sell';
     const volume = positionSize / price;
     try {

@@ -45,10 +45,25 @@ module.exports = {
   },
 
   async getAccountBalance() {
+    // Echte Balance kommt aus Hyperliquid (Vault Account Value in USDC).
+    // Kraken ist derzeit ohne API Keys, der 10k-Fallback war reine Fiktion
+    // und fuehrte dazu dass der RiskManager Positionen gegen eine fake
+    // Baseline sizte. Wir ziehen jetzt den echten Wert und cachen ihn in
+    // bot_settings.account_balance fuer Dashboard-Instant-Reads.
+    try {
+      const hyperliquid = require('../api/hyperliquid');
+      const value = await hyperliquid.getAccountValue();
+      if (value > 0) {
+        await this.updateBalance(value);
+        return value;
+      }
+    } catch (err) {
+      // Fall through zum Cache
+    }
     const { data, error } = await supabase
       .from('bot_settings').select('value').eq('key', 'account_balance').single();
-    if (error) return 10000;
-    return parseFloat(data.value) || 10000;
+    if (error || !data) return 0;
+    return parseFloat(data.value) || 0;
   },
 
   async updateBalance(balance) {
