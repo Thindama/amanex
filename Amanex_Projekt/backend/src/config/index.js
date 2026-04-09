@@ -17,6 +17,16 @@ module.exports = {
   GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
   DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
 
+  // Modell-IDs per env override. Anbieter rotieren regelmaessig, daher
+  // sind die Defaults hier die aktuellen Stand 2026-04. Wenn ein Anbieter
+  // einen Namen deprecated, kann der User die ID per Railway-Var aendern,
+  // ohne Code-Deploy.
+  XAI_MODEL:       process.env.XAI_MODEL       || 'grok-4-latest',
+  CLAUDE_MODEL:    process.env.CLAUDE_MODEL    || 'claude-sonnet-4-6',
+  OPENAI_MODEL:    process.env.OPENAI_MODEL    || 'gpt-4o',
+  GEMINI_MODEL:    process.env.GEMINI_MODEL    || 'gemini-2.5-flash',
+  DEEPSEEK_MODEL:  process.env.DEEPSEEK_MODEL  || 'deepseek-chat',
+
   // Maerkte
   KALSHI_API_KEY: process.env.KALSHI_API_KEY,
   KALSHI_API_SECRET: process.env.KALSHI_API_SECRET,

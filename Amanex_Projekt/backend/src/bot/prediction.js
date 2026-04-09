@@ -51,14 +51,32 @@ const prediction = {
         this.queryDeepSeek(prompt),
       ]);
 
-      // Ergebnisse extrahieren
-      const predictions = {
-        grok:     grokResult.status     === 'fulfilled' ? grokResult.value     : null,
-        claude:   claudeResult.status   === 'fulfilled' ? claudeResult.value   : null,
-        gpt4o:    gpt4oResult.status    === 'fulfilled' ? gpt4oResult.value    : null,
-        gemini:   geminiResult.status   === 'fulfilled' ? geminiResult.value   : null,
-        deepseek: deepseekResult.status === 'fulfilled' ? deepseekResult.value : null,
-      };
+      // Ergebnisse extrahieren + Fehler pro Modell loggen (vorher geschluckt
+      // von Promise.allSettled → User konnte nicht erkennen warum modelCount
+      // zu niedrig war und Trades als "KI-Konfidenz zu niedrig" abgelehnt wurden).
+      const modelResults = [
+        ['grok',     grokResult],
+        ['claude',   claudeResult],
+        ['gpt4o',    gpt4oResult],
+        ['gemini',   geminiResult],
+        ['deepseek', deepseekResult],
+      ];
+      const predictions = {};
+      for (const [name, result] of modelResults) {
+        if (result.status === 'fulfilled') {
+          predictions[name] = result.value;
+          if (result.value === null) {
+            logger.warn('KI-Modell antwortet unparsbar', { model: name, market: market.id });
+          }
+        } else {
+          predictions[name] = null;
+          const reason = result.reason;
+          const msg = reason?.response
+            ? `HTTP ${reason.response.status} ${JSON.stringify(reason.response.data).slice(0, 200)}`
+            : (reason?.message || String(reason));
+          logger.warn('KI-Modell Fehler', { model: name, market: market.id, error: msg });
+        }
+      }
 
       // Gewichteten Konsens berechnen
       const consensus = this.calculateConsensus(predictions);
@@ -130,7 +148,7 @@ const prediction = {
     if (!config.XAI_API_KEY) throw new Error('Grok API Key fehlt');
 
     const response = await axios.post('https://api.x.ai/v1/chat/completions', {
-      model: 'grok-beta',
+      model: config.XAI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 50,
       temperature: 0.1,
@@ -149,7 +167,7 @@ const prediction = {
     if (!config.ANTHROPIC_API_KEY) throw new Error('Anthropic API Key fehlt');
 
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-6',
+      model: config.CLAUDE_MODEL,
       max_tokens: 50,
       messages: [{ role: 'user', content: prompt }],
     }, {
@@ -168,7 +186,7 @@ const prediction = {
     if (!config.OPENAI_API_KEY) throw new Error('OpenAI API Key fehlt');
 
     const response = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-4o',
+      model: config.OPENAI_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 50,
       temperature: 0.1,
@@ -187,7 +205,7 @@ const prediction = {
     if (!config.GOOGLE_API_KEY) throw new Error('Google API Key fehlt');
 
     const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${config.GOOGLE_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${config.GEMINI_MODEL}:generateContent?key=${config.GOOGLE_API_KEY}`,
       {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { maxOutputTokens: 50, temperature: 0.1 },
@@ -204,7 +222,7 @@ const prediction = {
     if (!config.DEEPSEEK_API_KEY) throw new Error('DeepSeek API Key fehlt');
 
     const response = await axios.post('https://api.deepseek.com/v1/chat/completions', {
-      model: 'deepseek-chat',
+      model: config.DEEPSEEK_MODEL,
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 50,
       temperature: 0.1,
