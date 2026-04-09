@@ -2,6 +2,7 @@ const axios = require('axios');
 const config = require('../config');
 const logger = require('../utils/logger');
 const db = require('../utils/db');
+const modelHealth = require('../utils/modelHealth');
 
 // ── PREDICTION MODUL
 // Fragt alle 5 KI-Modelle unabhaengig ab
@@ -67,6 +68,9 @@ const prediction = {
           predictions[name] = result.value;
           if (result.value === null) {
             logger.warn('KI-Modell antwortet unparsbar', { model: name, market: market.id });
+            modelHealth.recordError(name, 'unparsbare Antwort');
+          } else {
+            modelHealth.recordSuccess(name);
           }
         } else {
           predictions[name] = null;
@@ -75,6 +79,7 @@ const prediction = {
             ? `HTTP ${reason.response.status} ${JSON.stringify(reason.response.data).slice(0, 200)}`
             : (reason?.message || String(reason));
           logger.warn('KI-Modell Fehler', { model: name, market: market.id, error: msg });
+          modelHealth.recordError(name, msg);
         }
       }
 

@@ -4,6 +4,7 @@ const { RiskManager } = require('../risk/riskManager');
 const config = require('../config');
 const db = require('../utils/db');
 const logger = require('../utils/logger');
+const notifier = require('../utils/notifier');
 
 // Globaler RiskManager — eine Instanz fuer alle Exchanges.
 // Phase-1-Rollout: nur Hyperliquid laeuft durch das Gate. Fuer Kraken
@@ -63,9 +64,18 @@ const executor = {
         if (executableMarket.platform === 'kraken') result = await this.executeKraken(executableMarket);
         else if (executableMarket.platform === 'hyperliquid') result = await this.executeHyperliquid(executableMarket);
         else if (executableMarket.type === 'stock' || executableMarket.type?.startsWith('stock')) result = await this.createStockRecommendation(executableMarket);
-        if (result) results.push(result);
+        if (result) {
+          results.push(result);
+          notifier.tradeOpened({
+            pair: result.pair || market.id,
+            signal: result.signal || market.signal,
+            size: result.size || market.positionSize,
+            entry_price: result.entry_price || market.price,
+          });
+        }
       } catch (error) {
         logger.error('Trade Fehler', { market: market.id, message: error.message });
+        notifier.error('Trade', `${market.id}: ${error.message}`);
       }
     }
     logger.info('Executor abgeschlossen', { executed: results.length });

@@ -104,6 +104,34 @@ app.post('/api/bot/stop', auth, (req, res) => {
   res.json({ success: true, message: 'Bot gestoppt' });
 });
 
+app.get('/api/bot/model-health', auth, (_req, res) => {
+  const modelHealth = require('./utils/modelHealth');
+  res.json(modelHealth.snapshot());
+});
+
+app.post('/api/bot/emergency-stop', auth, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Nur Admins' });
+  const notifier = require('./utils/notifier');
+  scheduler.activateKillSwitch();
+  let closed = 0;
+  try {
+    const hyperliquid = require('./api/hyperliquid');
+    const positions = await hyperliquid.getOpenPositions();
+    for (const p of positions || []) {
+      try {
+        await hyperliquid.closePosition(p.coin || p.asset || p.symbol);
+        closed += 1;
+      } catch (err) {
+        logger.warn('close position failed', { pos: p, message: err.message });
+      }
+    }
+  } catch (err) {
+    logger.error('emergency-stop close failed', { message: err.message });
+  }
+  notifier.circuitBreaker(`Emergency-Stop von ${req.user.email || 'admin'} - ${closed} Positionen geschlossen`);
+  res.json({ success: true, closed, message: `Bot gestoppt, ${closed} Positionen geschlossen` });
+});
+
 app.post('/api/bot/scan', auth, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Nur Admins' });
   scheduler.runPipeline();
